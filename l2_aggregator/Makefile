@@ -6,6 +6,7 @@ PCAP_DIR = pcap
 
 P4C = p4c-bm2-ss
 MININET = /home/p4/src/p4dev-python-venv/bin/mn
+PYTHON = /home/p4/src/p4dev-python-venv/bin/python
 P4C_ARGS = --p4runtime-file $(basename $@).p4info --p4runtime-format text
 source := $(wildcard $(SRC_DIR)/*.p4)
 P4_FILES := $(notdir $(source))
@@ -16,7 +17,7 @@ all: build run
 
 run:
 	@echo "Running L2 Aggregator..."
-	@echo "No run command implemented yet. Exiting."
+	cd mininet ; sudo ./run_emu.py
 
 build:	dirs $(compiled_json)
 $(BUILD_DIR)/%.json: $(SRC_DIR)/%.p4
