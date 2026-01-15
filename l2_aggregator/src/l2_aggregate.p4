@@ -78,7 +78,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         transition select(hdr.ethernet.etherType) {
             EtherType.IPV4: parse_ipv4;
             EtherType.ARP:  parse_arp;
-            default:        reject;
+            default:        accept;
         }
     }
 
@@ -101,8 +101,73 @@ control checksum_verifier(inout headers hdr, inout metadata mta) {
 
 control sw_ingress(inout headers hdr, inout metadata mta,
                 inout standard_metadata_t std_meta) {
+    // default drop action
+    action drop() {
+        mark_to_drop(std_meta);
+    }
+    
+    // ARP Learning action(s) and table
+    action mac_resolve(macAddr_t dst_mac) {
+        hdr.arp.op_code = ArpOpCode.REPLY;
+        // swap MAC addresses
+        hdr.arp.dst_mac = hdr.arp.src_mac;
+        hdr.arp.src_mac = dst_mac;
+        // swap IP addresses
+        ip4Addr_t temp_ip = hdr.arp.dst_ip;
+        hdr.arp.dst_ip = hdr.arp.src_ip;
+        hdr.arp.src_ip = temp_ip;
+        // set ethernet addresses
+        hdr.ethernet.dstAddr = hdr.arp.dst_mac;
+        hdr.ethernet.srcAddr = hdr.arp.src_mac;
+        // return the packet out from the ingress port (back to the sender)
+        std_meta.egress_spec = std_meta.ingress_port;
+    }
+    
+    table arp_learning{
+        actions = {
+            mac_resolve;
+            drop;
+        }
+        key = {
+            hdr.arp.dst_ip: exact;
+        }
+        size = 64;
+        default_action = drop();
+    }
+
+    // L2 forwarding logic
+    action forward(egressSpec_t port) {
+        std_meta.egress_spec = port;
+    }
+
+    table eth_forward{
+        actions = {
+            forward;
+            drop;
+        }
+        key = {
+            hdr.ethernet.dstAddr: exact;
+        }
+        size = 1024;
+        default_action = drop();
+    }
+
+    // L2 Aggregation logic
+    action aggregate() {
+        // Implement aggregation logic here
+    }
+
     apply {
-        // Add ingress logic here
+        if (hdr.ethernet.isValid()) {
+            if (hdr.ethernet.etherType == EtherType.ARP && hdr.arp.isValid() && hdr.arp.op_code == ArpOpCode.REQUEST) {
+                arp_learning.apply();
+            }
+            else {
+                eth_forward.apply();
+            }
+        } else {
+            drop();
+        }
     }
 }
 
@@ -140,6 +205,10 @@ control sw_deparser(packet_out pkt, in headers hdr) {
         pkt.emit(hdr.ipv4);
     }
 }
+
+/*
+------- Instantiate the switch --------
+*/
 
 V1Switch(
     pkt_parser(),
