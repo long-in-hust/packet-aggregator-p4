@@ -43,3 +43,109 @@ header ipv4_t {
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
 }
+
+/*
+------- Define custom enums --------
+*/
+enum bit<16> EtherType {
+  IPV4      = 0x0800,
+  ARP       = 0x0806
+}
+enum bit<16> ArpOpCode {
+  REQUEST  = 1,
+  REPLY    = 2
+}
+
+/* 
+------- Define custom structures --------
+*/
+struct headers {
+    ethernet_t   ethernet;
+    arp_t        arp;
+    ipv4_t       ipv4;
+}
+struct metadata {
+    /* empty */
+}
+
+/* 
+------- Switch logic --------
+*/
+parser pkt_parser(packet_in pkt, out headers hdr,
+                      inout metadata mta, inout standard_metadata_t std_meta) {
+    state start {
+        pkt.extract(hdr.ethernet);
+        transition select(hdr.ethernet.etherType) {
+            EtherType.IPV4: parse_ipv4;
+            EtherType.ARP:  parse_arp;
+            default:        reject;
+        }
+    }
+
+    state parse_ipv4 {
+        pkt.extract(hdr.ipv4);
+        transition accept;
+    }
+
+    state parse_arp {
+        pkt.extract(hdr.arp);
+        transition accept;
+    }
+}
+
+control checksum_verifier(inout headers hdr, inout metadata mta) {
+    apply {
+        // Will leave it empty for now
+    }
+}
+
+control sw_ingress(inout headers hdr, inout metadata mta,
+                inout standard_metadata_t std_meta) {
+    apply {
+        // Add ingress logic here
+    }
+}
+
+control sw_egress(inout headers hdr, inout metadata mta,
+               inout standard_metadata_t std_meta) {
+    apply {
+        // Add egress logic here
+    }
+}
+
+control checksum_recalc(inout headers hdr, inout metadata mta) {
+     apply {
+	update_checksum(
+	    hdr.ipv4.isValid(),
+            { hdr.ipv4.version,
+	      hdr.ipv4.ihl,
+              hdr.ipv4.diffserv,
+              hdr.ipv4.totalLen,
+              hdr.ipv4.identification,
+              hdr.ipv4.flags,
+              hdr.ipv4.fragOffset,
+              hdr.ipv4.ttl,
+              hdr.ipv4.protocol,
+              hdr.ipv4.srcAddr,
+              hdr.ipv4.dstAddr },
+            hdr.ipv4.hdrChecksum,
+            HashAlgorithm.csum16);
+    }
+}
+
+control sw_deparser(packet_out pkt, in headers hdr) {
+    apply {
+        pkt.emit(hdr.ethernet);
+        pkt.emit(hdr.arp);
+        pkt.emit(hdr.ipv4);
+    }
+}
+
+V1Switch(
+    pkt_parser(),
+    checksum_verifier(),
+    sw_ingress(),
+    sw_egress(),
+    checksum_recalc(),
+    sw_deparser()
+) main;
