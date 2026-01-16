@@ -20,9 +20,10 @@ run:
 	cd mininet ; sudo ./run_emu.py
 
 build:	dirs $(compiled_json)
-$(BUILD_DIR)/%.json: $(SRC_DIR)/%.p4
 	@echo "Building L2 Aggregator..."
-	$(P4C) --p4v 16 $(P4C_ARGS) -o $@ $<
+	$(P4C) --p4v 16 $(P4C_ARGS) -o $(BUILD_DIR)/l2_aggregate.json \
+		--p4runtime-file $(BUILD_DIR)/l2_aggregate.p4info \
+		src/aggregator/main.p4
 
 dirs:
 	mkdir -p $(BUILD_DIR) $(LOG_DIR) $(LOGS_DEVICES_DIR) $(PCAP_DIR)

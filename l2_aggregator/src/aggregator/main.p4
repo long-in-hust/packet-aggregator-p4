@@ -1,72 +1,6 @@
 #include <core.p4>
 #include <v1model.p4>
-
-/* 
-------- Define custom types --------
-*/
-typedef bit<9>  egressSpec_t;
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
-
-/* 
-------- Define headers --------
-*/
-header ethernet_t {
-    macAddr_t dstAddr;
-    macAddr_t srcAddr;
-    bit<16>   etherType;
-}
-
-header arp_t {
-  bit<16>   h_type;
-  bit<16>   p_type;
-  bit<8>    h_len;
-  bit<8>    p_len;
-  bit<16>   op_code;
-  macAddr_t src_mac;
-  ip4Addr_t src_ip;
-  macAddr_t dst_mac;
-  ip4Addr_t dst_ip;
-}
-
-header ipv4_t {
-    bit<4>    version;
-    bit<4>    ihl;
-    bit<8>    diffserv;
-    bit<16>   totalLen;
-    bit<16>   identification;
-    bit<3>    flags;
-    bit<13>   fragOffset;
-    bit<8>    ttl;
-    bit<8>    protocol;
-    bit<16>   hdrChecksum;
-    ip4Addr_t srcAddr;
-    ip4Addr_t dstAddr;
-}
-
-/*
-------- Define custom enums --------
-*/
-enum bit<16> EtherType {
-  IPV4      = 0x0800,
-  ARP       = 0x0806
-}
-enum bit<16> ArpOpCode {
-  REQUEST  = 1,
-  REPLY    = 2
-}
-
-/* 
-------- Define custom structures --------
-*/
-struct headers {
-    ethernet_t   ethernet;
-    arp_t        arp;
-    ipv4_t       ipv4;
-}
-struct metadata {
-    /* empty */
-}
+#include "dataStructs.p4"
 
 /* 
 ------- Switch logic --------
@@ -76,15 +10,9 @@ parser pkt_parser(packet_in pkt, out headers hdr,
     state start {
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            EtherType.IPV4: parse_ipv4;
             EtherType.ARP:  parse_arp;
             default:        accept;
         }
-    }
-
-    state parse_ipv4 {
-        pkt.extract(hdr.ipv4);
-        transition accept;
     }
 
     state parse_arp {
@@ -148,14 +76,11 @@ control sw_ingress(inout headers hdr, inout metadata mta,
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        size = 1024;
+        size = 64;
         default_action = drop();
     }
 
-    // L2 Aggregation logic
-    action aggregate() {
-        // Implement aggregation logic here
-    }
+    #include "aggregate.p4"
 
     apply {
         if (hdr.ethernet.isValid()) {
@@ -168,6 +93,7 @@ control sw_ingress(inout headers hdr, inout metadata mta,
         } else {
             drop();
         }
+        
     }
 }
 

@@ -1,0 +1,85 @@
+# proto-file: p4/config/v1/p4info.proto
+# proto-message: p4.config.v1.P4Info
+
+pkg_info {
+  arch: "v1model"
+}
+tables {
+  preamble {
+    id: 50311235
+    name: "sw_ingress.arp_learning"
+    alias: "arp_learning"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.arp.dst_ip"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  action_refs {
+    id: 30223822
+  }
+  action_refs {
+    id: 21855531
+  }
+  initial_default_action {
+    action_id: 21855531
+  }
+  size: 64
+}
+tables {
+  preamble {
+    id: 35010282
+    name: "sw_ingress.eth_forward"
+    alias: "eth_forward"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ethernet.dstAddr"
+    bitwidth: 48
+    match_type: EXACT
+  }
+  action_refs {
+    id: 32016012
+  }
+  action_refs {
+    id: 21855531
+  }
+  initial_default_action {
+    action_id: 21855531
+  }
+  size: 64
+}
+actions {
+  preamble {
+    id: 21855531
+    name: "sw_ingress.drop"
+    alias: "drop"
+  }
+}
+actions {
+  preamble {
+    id: 30223822
+    name: "sw_ingress.mac_resolve"
+    alias: "mac_resolve"
+  }
+  params {
+    id: 1
+    name: "dst_mac"
+    bitwidth: 48
+  }
+}
+actions {
+  preamble {
+    id: 32016012
+    name: "sw_ingress.forward"
+    alias: "forward"
+  }
+  params {
+    id: 1
+    name: "port"
+    bitwidth: 9
+  }
+}
+type_info {
+}
