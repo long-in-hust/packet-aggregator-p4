@@ -6,9 +6,8 @@ action formAggPacket() {
     // read count
     bit<6> count;
     register_count.read(count, (bit<32>)aggId);
-    count = count + 1; // calculate new count in advance to predict if max size can be reached with the next packet
 
-    if ((int)count * 272 > MAX_AGG_SIZE_BYTE * 8) {
+    if ((int)(count + 1) * 272 > MAX_AGG_SIZE_BYTE * 8) {
         // ---- if max size will be exceeded with the next packet ----
         // construct aggregated payload
         bit<8> i;
@@ -16,7 +15,7 @@ action formAggPacket() {
             bit<32> read_index = (bit<32>)aggId * (bit<32>)MAX_SEG + (bit<32>)i;
             bit<272> segment_data;
             register_data.read(segment_data, read_index);
-            // hdr.agg_payload.data = (hdr.agg_payload.data << 272) | segment_data;
+            hdr.payload[i].setValid();
             hdr.payload[i].data = segment_data;
         }
 
@@ -38,9 +37,15 @@ action sendPacket(egressSpec_t port) {
     std_meta.egress_spec = port;
 }
 
+action sendAggPacket(egressSpec_t port) {
+    formAggPacket();
+    std_meta.egress_spec = port;
+}
+
 table eth_forward{
     actions = {
         sendAggPacket;
+        sendPacket;
         drop;
     }
     key = {
