@@ -31,6 +31,9 @@ dirs:
 stop:
 	sudo $(MININET) -c
 
+cleanbuild:
+	rm -rf $(BUILD_DIR)
+
 clean: stop
 	rm -rf $(BUILD_DIR)
 
