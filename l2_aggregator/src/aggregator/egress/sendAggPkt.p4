@@ -1,6 +1,6 @@
 // this will be implemented in the egress control
 
-action sendAggPacket() {
+action formAggPacket() {
     // retrieve aggId from metadata
     bit<8> aggId = mta.aggId;
     // read count
@@ -20,8 +20,32 @@ action sendAggPacket() {
             hdr.payload[i].data = segment_data;
         }
 
+        // change ethernet type to indicate aggregated packet
+        hdr.ethernet.etherType = EtherType.L3AGG;
+
+        // set aggmeta header
+        hdr.aggmeta.setValid();
+        hdr.aggmeta.aggId = mta.aggId;
+
         // reset count
         register_count.write((bit<32>)aggId, (bit<6>)0);
         mta.aggSize_bit = (bit<16>)0;
     }
+}
+
+// L2 forwarding logic
+action sendPacket(egressSpec_t port) {
+    std_meta.egress_spec = port;
+}
+
+table eth_forward{
+    actions = {
+        sendAggPacket;
+        drop;
+    }
+    key = {
+        hdr.ethernet.dstAddr: exact;
+    }
+    size = 64;
+    default_action = drop();
 }

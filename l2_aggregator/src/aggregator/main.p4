@@ -53,7 +53,7 @@ control sw_ingress(inout headers hdr, inout metadata mta,
                 arp_learning.apply();
             }
             else if (hdr.ethernet.etherType == EtherType.L3AGG) {
-                eth_forward.apply();
+                NoAction();
             }
             else {
                 aggr_buffer.apply();
@@ -67,7 +67,13 @@ control sw_ingress(inout headers hdr, inout metadata mta,
 
 control sw_egress(inout headers hdr, inout metadata mta,
                inout standard_metadata_t std_meta) {
+                // default drop action
+    action drop() {
+        mark_to_drop(std_meta);
+    }
+
     #include "egress/sendAggPkt.p4"
+
     apply {
         // Add egress logic here
     }
