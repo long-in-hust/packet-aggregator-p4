@@ -75,7 +75,11 @@ control sw_egress(inout headers hdr, inout metadata mta,
     #include "egress/sendAggPkt.p4"
 
     apply {
-        // Add egress logic here
+        if (hdr.ethernet.isValid()) {
+            eth_forward.apply();
+        } else {
+            drop();
+        }
     }
 }
 
