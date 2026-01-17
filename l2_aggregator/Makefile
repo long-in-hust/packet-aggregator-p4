@@ -7,7 +7,7 @@ PCAP_DIR = pcap
 P4C = p4c-bm2-ss
 MININET = /home/p4/src/p4dev-python-venv/bin/mn
 PYTHON = /home/p4/src/p4dev-python-venv/bin/python
-P4C_ARGS = --p4runtime-file $(basename $@).p4info --p4runtime-format text
+P4C_ARGS = --p4runtime-files $(BUILD_DIR)/l2_aggregate.p4info.txtpb --p4runtime-format text
 source := $(wildcard $(SRC_DIR)/*.p4)
 P4_FILES := $(notdir $(source))
 
@@ -22,8 +22,8 @@ run:
 build:	dirs $(compiled_json)
 	@echo "Building L2 Aggregator..."
 	$(P4C) --p4v 16 $(P4C_ARGS) -o $(BUILD_DIR)/l2_aggregate.json \
-		--p4runtime-file $(BUILD_DIR)/l2_aggregate.p4info \
 		src/aggregator/main.p4
+	@echo "Building Succeeded..."
 
 dirs:
 	mkdir -p $(BUILD_DIR) $(LOG_DIR) $(LOGS_DEVICES_DIR) $(PCAP_DIR)
