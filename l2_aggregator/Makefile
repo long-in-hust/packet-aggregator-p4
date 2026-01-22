@@ -19,10 +19,16 @@ run:
 	@echo "Running L2 Aggregator..."
 	cd mininet ; sudo ./run_emu.py
 
-build:	dirs $(compiled_json)
+build_aggregator:	dirs $(compiled_json)
 	@echo "Building L2 Aggregator..."
 	$(P4C) --p4v 16 $(P4C_ARGS) -o $(BUILD_DIR)/l2_aggregate.json \
 		src/aggregator/main.p4
+	@echo "Building Succeeded..."
+
+build_splitter:	dirs $(compiled_json)
+	@echo "Building L2 Splitter..."
+	$(P4C) --p4v 16 $(P4C_ARGS) -o $(BUILD_DIR)/l2_split.json \
+		src/splitter/main.p4
 	@echo "Building Succeeded..."
 
 dirs:

@@ -77,4 +77,5 @@ struct headers {
 struct metadata {
     bit<8> aggId;
     bit<16> aggSize_bit;
+    bit<8> segCountRemaining;
 }

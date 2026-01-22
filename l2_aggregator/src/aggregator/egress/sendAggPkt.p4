@@ -171,6 +171,7 @@ action formAggPacket() {
         // set aggmeta header
         hdr.aggmeta.setValid();
         hdr.aggmeta.aggId = mta.aggId;
+        hdr.aggmeta.segCount = count + 1;
 
         // reset count
         register_count.write((bit<32>)aggId, (bit<6>)0);
