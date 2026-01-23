@@ -1,6 +1,10 @@
-const int MAX_FLOWS   = 3; // maximum aggregation flows
+#define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
+#define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
+
+const bit<10> MAX_SEG_BUF   = 512; // maximum aggregation flows
+// const int MAX_FLOWS   = 3; // maximum aggregation flows
 const int MAX_SEG   = 256; // maximum segments per aggregation flow
-const int MAX_AGG_SIZE_BYTE = 1024; // maximum aggregation size in bytes
+// const int MAX_AGG_SIZE_BYTE = 1024; // maximum aggregation size in bytes
 
 /* 
 ------- Define custom types --------
@@ -13,8 +17,9 @@ typedef bit<32> ip4Addr_t;
 ------ Registers ------
 */
 
-register <bit<6>>(MAX_FLOWS)               register_count;
-register<bit<272>>(MAX_FLOWS * MAX_SEG)    register_data;
+register<bit<272>>((bit<32>)MAX_SEG_BUF)    register_data;
+register<bit<10>>(1)               count_variable;
+register<bit<10>>(2)               head_tail_index;
 
 /* 
 ------- Define headers --------
@@ -75,7 +80,7 @@ struct headers {
 }
 
 struct metadata {
-    bit<8> aggId;
     bit<16> aggSize_bit;
     bit<8> segCountRemaining;
+    bool usedInSplit;
 }
