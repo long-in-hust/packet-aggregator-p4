@@ -1,6 +1,6 @@
 const int MAX_FLOWS   = 3; // maximum aggregation flows
 const int MAX_SEG   = 256; // maximum segments per aggregation flow
-const int MAX_AGG_SIZE_BYTE = 1024; // maximum aggregation size in bytes
+const int MAX_AGG_SIZE_BYTE = 512; // maximum aggregation size in bytes
 
 /* 
 ------- Define custom types --------
@@ -14,7 +14,7 @@ typedef bit<32> ip4Addr_t;
 */
 
 register <bit<6>>(MAX_FLOWS)               register_count;
-register<bit<272>>(MAX_FLOWS * MAX_SEG)    register_data;
+register<bit<672>>(MAX_FLOWS * MAX_SEG)    register_data;
 
 /* 
 ------- Define headers --------
@@ -42,7 +42,7 @@ header eth_payload_t {
     // bit<64> udp;
     // bit<32> coap;
     // bit<16> payload;
-    bit<272> data;
+    bit<672> data;
 }
 
 header aggmeta_t {
@@ -77,4 +77,5 @@ struct headers {
 struct metadata {
     bit<8> aggId;
     bit<16> aggSize_bit;
+    bit<8> segOutRemaining;
 }

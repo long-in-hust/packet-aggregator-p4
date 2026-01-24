@@ -1,4 +1,3 @@
-
 #!/home/p4/src/p4dev-python-venv/bin/python
 
 import argparse
@@ -45,32 +44,30 @@ def writeAggBufferRules(p4info_helper, sw, dst_mac, agg_flow_id):
     sw.WriteTableEntry(table_entry)
     print("Install Buffer rule into switch %s" % sw.name)
 
+def writeForwardingRules(p4info_helper, sw, dst_mac, out_port):
+    table_entry = p4info_helper.buildTableEntry(
+            table_name="sw_ingress.eth_forward",
+            match_fields={
+                "hdr.ethernet.dstAddr":dst_mac
+            },
+            action_name="sw_ingress.forward",
+            action_params={
+                "port":out_port,
+            })
+    sw.WriteTableEntry(table_entry)
+    print("Install Forwarding rule into switch %s" % sw.name)
+
 # egress rule
-def writeEgressAggPktRules(p4info_helper, sw, dst_mac, out_port):
+def writeEgressAggPktRules(p4info_helper, sw, dst_mac):
     table_entry = p4info_helper.buildTableEntry(
             table_name="sw_egress.eth_forward",
             match_fields={
                 "hdr.ethernet.dstAddr":dst_mac
             },
-            action_name="sw_egress.sendAggPacket",
-            action_params={
-                "port":out_port,
-            })
+            action_name="sw_egress.formAggPacket"
+    )
     sw.WriteTableEntry(table_entry)
     print("Install Egress AggPkt rule into switch %s" % sw.name)
-
-def writeEgressNormalPktRules(p4info_helper, sw, dst_mac, out_port):
-    table_entry = p4info_helper.buildTableEntry(
-            table_name="sw_egress.eth_forward",
-            match_fields={
-                "hdr.ethernet.dstAddr":dst_mac
-            },
-            action_name="sw_egress.sendPacket",
-            action_params={
-                "port":out_port,
-            })
-    sw.WriteTableEntry(table_entry)
-    print("Install Egress NormalPkt rule into switch %s" % sw.name)
 
 def main(p4info_file_path, bmv2_file_path):
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(p4info_file_path)
@@ -84,8 +81,8 @@ def main(p4info_file_path, bmv2_file_path):
     switch_port = {
                     's1': {'00:00:00:00:00:01':1,
                            '00:00:00:00:00:02':2,
-                           '00:00:00:00:00:03':2
-                           ,'00:00:00:00:00:04':3},
+                           '00:00:00:00:00:03':2,
+                           '00:00:00:00:00:04':3},
                     's2': {'00:00:00:00:00:01':3,
                            '00:00:00:00:00:02':1,
                            '00:00:00:00:00:03':2}
@@ -108,17 +105,18 @@ def main(p4info_file_path, bmv2_file_path):
     for ip in hosts_mac:
         writeArpRules(p4info_helper, sw=s1, arp_request_ip=ip, arp_reply_mac=hosts_mac[ip])
     
+    # Forwarding rules
+    writeForwardingRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:01', out_port=switch_port['s1']['00:00:00:00:00:01'])
+    writeForwardingRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', out_port=switch_port['s1']['00:00:00:00:00:04'])
+    
     # Aggregation buffer rules
     writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03', agg_flow_id=0)
     writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', agg_flow_id=1)
 
     # Egress rules
     # For aggregated packets
-    writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03', out_port=switch_port['s1']['00:00:00:00:00:03'])
-    writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', out_port=switch_port['s1']['00:00:00:00:00:04'])
-    # For normal packets
-    writeEgressNormalPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:01', out_port=switch_port['s1']['00:00:00:00:00:01'])
-    writeEgressNormalPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:02', out_port=switch_port['s1']['00:00:00:00:00:02'])
+    writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03')
+    writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04')  
 
     # Read table entries to check changes
     readTableRules(p4info_helper, s1)

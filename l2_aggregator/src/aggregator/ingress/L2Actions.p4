@@ -28,18 +28,18 @@ table arp_learning{
 }
 
 // L2 forwarding logic
-// action forward(egressSpec_t port) {
-//     std_meta.egress_spec = port;
-// }
+action forward(egressSpec_t port) {
+    std_meta.egress_spec = port;
+}
 
-// table eth_forward{
-//     actions = {
-//         forward;
-//         drop;
-//     }
-//     key = {
-//         hdr.ethernet.dstAddr: exact;
-//     }
-//     size = 64;
-//     default_action = drop();
-// }
+table eth_forward{
+    actions = {
+        forward;
+        drop;
+    }
+    key = {
+        hdr.ethernet.dstAddr: exact;
+    }
+    size = 64;
+    default_action = drop();
+}

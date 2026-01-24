@@ -52,11 +52,14 @@ control sw_ingress(inout headers hdr, inout metadata mta,
             {
                 arp_learning.apply();
             }
-            else if (hdr.ethernet.etherType == EtherType.L3AGG) {
-                NoAction();
-            }
             else {
-                aggr_buffer.apply();
+                if (hdr.ethernet.etherType == EtherType.L3AGG) {
+                    NoAction();
+                }
+                else {
+                    aggr_buffer.apply();
+                }
+                eth_forward.apply();
             }
         } else {
             drop();
