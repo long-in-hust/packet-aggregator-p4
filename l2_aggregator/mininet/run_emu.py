@@ -66,23 +66,39 @@ class ExerciseTopo(Topo):
             # Each host IP should be /24, so all exercise traffic will use the
             # default gateway (the switch) without sending ARP requests.
             self.addHost(host_name, ip=host_ip+'/24', mac=host_mac)
-            self.addLink(host_name, host_sw,
-                         delay=link['latency'], bw=link['bandwidth'],
-                         addr1=host_mac, addr2=host_mac)
-            self.addSwitchPort(host_sw, host_name)
+            link_params = {
+                'delay': link['latency'],
+                'bw': link['bandwidth'],
+                'addr1': host_mac,
+                'addr2': host_mac
+            }
+            if link.get('node2_port') is not None:
+                link_params['port2'] = link['node2_port']
+            self.addLink(host_name, host_sw, **link_params)
+            self.addSwitchPort(host_sw, host_name, portno=link.get('node2_port'))
 
         for link in switch_links:
-            self.addLink(link['node1'], link['node2'],
-                        delay=link['latency'], bw=link['bandwidth'])
-            self.addSwitchPort(link['node1'], link['node2'])
-            self.addSwitchPort(link['node2'], link['node1'])
+            n1, n2 = link['node1'], link['node2']
+            p1, p2 = link.get('node1_port'), link.get('node2_port')
+            link_params = {
+                'delay': link['latency'],
+                'bw': link['bandwidth']
+            }
+            if p1 is not None:
+                link_params['port1'] = p1
+            if p2 is not None:
+                link_params['port2'] = p2
+            self.addLink(n1, n2, **link_params)
+            self.addSwitchPort(n1, n2, portno=p1)
+            self.addSwitchPort(n2, n1, portno=p2)
 
         self.printPortMapping()
 
-    def addSwitchPort(self, sw, node2):
+    def addSwitchPort(self, sw, node2, portno=None):
         if sw not in self.sw_port_mapping:
             self.sw_port_mapping[sw] = []
-        portno = len(self.sw_port_mapping[sw])+1
+        if portno is None:
+            portno = len(self.sw_port_mapping[sw]) + 1
         self.sw_port_mapping[sw].append((portno, node2))
 
     def printPortMapping(self):
@@ -181,27 +197,58 @@ class ExerciseRunner:
         self.net.stop()
 
 
+    def parse_node(self, node):
+        """Parse a node string which may include an explicit port, e.g. 's1-p2'.
+
+           Returns a tuple (base_name, port) where port is an int or None.
+        """
+        if '-p' in node:
+            base, port = node.split('-p', 1)
+            if not port.isdigit():
+                raise Exception("Invalid port in link endpoint '%s'" % node)
+            return base, int(port)
+        return node, None
+
+
     def parse_links(self, unparsed_links):
-        """ Given a list of links descriptions of the form [node1, node2, latency, bandwidth]
-            with the latency and bandwidth being optional, parses these descriptions
-            into dictionaries and store them as self.links
+        """ Given a list of link descriptions of the form
+            [node1, node2, latency, bandwidth] where node names may optionally
+            specify a switch port as 's<num>-p<port>', parse these descriptions
+            into dictionaries and store them as self.links.
         """
         links = []
-        for link in unparsed_links:
-            # make sure each link's endpoints are ordered alphabetically
-            s, t, = link[0], link[1]
-            if s > t:
-                s,t = t,s
+        for raw in unparsed_links:
+            s_raw, t_raw = raw[0], raw[1]
+            s_node, s_port = self.parse_node(s_raw)
+            t_node, t_port = self.parse_node(t_raw)
 
-            link_dict = {'node1':s,
-                        'node2':t,
-                        'latency':'0ms',
-                        'bandwidth':None
-                        }
-            if len(link) > 2:
-                link_dict['latency'] = self.formatLatency(link[2])
-            if len(link) > 3:
-                link_dict['bandwidth'] = link[3]
+            # Ensure host-switch links are oriented with the host as node1
+            # and order switch-switch links alphabetically by switch name.
+            if s_node[0] == 'h' and t_node[0] == 's':
+                node1, port1, node2, port2 = s_node, s_port, t_node, t_port
+            elif t_node[0] == 'h' and s_node[0] == 's':
+                node1, port1, node2, port2 = t_node, t_port, s_node, s_port
+            else:
+                # either switch-switch or malformed; for switch-switch,
+                # keep alphabetical order while preserving port bindings
+                if s_node > t_node:
+                    node1, port1, node2, port2 = t_node, t_port, s_node, s_port
+                else:
+                    node1, port1, node2, port2 = s_node, s_port, t_node, t_port
+
+            link_dict = {
+                'node1': node1,
+                'node2': node2,
+                'node1_port': port1,
+                'node2_port': port2,
+                'latency': '0ms',
+                'bandwidth': None
+            }
+
+            if len(raw) > 2:
+                link_dict['latency'] = self.formatLatency(raw[2])
+            if len(raw) > 3:
+                link_dict['bandwidth'] = raw[3]
 
             if link_dict['node1'][0] == 'h':
                 assert link_dict['node2'][0] == 's', 'Hosts should be connected to switches, not ' + str(link_dict['node2'])
