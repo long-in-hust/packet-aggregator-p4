@@ -77,13 +77,15 @@ def main(p4info_file_path, bmv2_file_path):
 
     hosts_mac = {'10.0.0.1':'00:00:00:00:00:01',
                  '10.0.0.2':'00:00:00:00:00:02',
-                 '10.0.0.3':'00:00:00:00:00:03'
+                 '10.0.0.3':'00:00:00:00:00:03',
+                 '10.0.0.4':'00:00:00:00:00:04'
                 }
     # Forwarding rules for the switches, i.e., which dst_mac can be reached via which port
     switch_port = {
                     's1': {'00:00:00:00:00:01':1,
                            '00:00:00:00:00:02':2,
-                           '00:00:00:00:00:03':2},
+                           '00:00:00:00:00:03':2
+                           ,'00:00:00:00:00:04':3},
                     's2': {'00:00:00:00:00:01':3,
                            '00:00:00:00:00:02':1,
                            '00:00:00:00:00:03':2}
@@ -108,9 +110,13 @@ def main(p4info_file_path, bmv2_file_path):
     
     # Aggregation buffer rules
     writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03', agg_flow_id=0)
+    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', agg_flow_id=1)
 
     # Egress rules
+    # For aggregated packets
     writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03', out_port=switch_port['s1']['00:00:00:00:00:03'])
+    writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', out_port=switch_port['s1']['00:00:00:00:00:04'])
+    # For normal packets
     writeEgressNormalPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:01', out_port=switch_port['s1']['00:00:00:00:00:01'])
     writeEgressNormalPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:02', out_port=switch_port['s1']['00:00:00:00:00:02'])
 
