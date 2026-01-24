@@ -7,7 +7,8 @@ PCAP_DIR = pcap
 P4C = p4c-bm2-ss
 MININET = /home/p4/src/p4dev-python-venv/bin/mn
 PYTHON = /home/p4/src/p4dev-python-venv/bin/python
-P4C_ARGS = --p4runtime-files $(BUILD_DIR)/l2_aggregate.p4info.txtpb --p4runtime-format text
+P4C_ARGS_AGG = --p4runtime-files $(BUILD_DIR)/l2_aggregate.p4info.txtpb --p4runtime-format text
+P4C_ARGS_SPL = --p4runtime-files $(BUILD_DIR)/l2_split.p4info.txtpb --p4runtime-format text
 source := $(wildcard $(SRC_DIR)/*.p4)
 P4_FILES := $(notdir $(source))
 
@@ -21,15 +22,17 @@ run:
 
 build_aggregator:	dirs $(compiled_json)
 	@echo "Building L2 Aggregator..."
-	$(P4C) --p4v 16 $(P4C_ARGS) -o $(BUILD_DIR)/l2_aggregate.json \
+	$(P4C) --p4v 16 $(P4C_ARGS_AGG) -o $(BUILD_DIR)/l2_aggregate.json \
 		src/aggregator/main.p4
 	@echo "Building Succeeded..."
 
 build_splitter:	dirs $(compiled_json)
 	@echo "Building L2 Splitter..."
-	$(P4C) --p4v 16 $(P4C_ARGS) -o $(BUILD_DIR)/l2_split.json \
+	$(P4C) --p4v 16 $(P4C_ARGS_SPL) -o $(BUILD_DIR)/l2_split.json \
 		src/splitter/main.p4
-	@echo "Building Succeeded..."
+	@echo "Building Succeeded..."\
+
+build: build_aggregator build_splitter
 
 dirs:
 	mkdir -p $(BUILD_DIR) $(LOG_DIR) $(LOGS_DEVICES_DIR) $(PCAP_DIR)
