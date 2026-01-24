@@ -177,6 +177,9 @@ action formAggPacket() {
         register_count.write((bit<32>)aggId, (bit<6>)0);
         mta.aggSize_bit = (bit<16>)0;
     }
+    else {
+        drop();
+    }
 }
 
 // L2 forwarding logic
