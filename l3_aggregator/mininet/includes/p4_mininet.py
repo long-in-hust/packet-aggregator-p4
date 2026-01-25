@@ -111,7 +111,7 @@ class P4Switch(Switch):
             exit(1)
 
         self.verbose = verbose
-        logfile = "/home/p4/other-p4/packet-aggregator-p4/l2_aggregator/logs/devices/p4s.{}.log".format(self.name)
+        logfile = "/home/p4/other-p4/packet-aggregator-p4/l3_aggregator/logs/devices/p4s.{}.log".format(self.name)
         self.output = open(logfile, 'w')
         self.pcap_dump = pcap_dump
         self.enable_debugger = enable_debugger
@@ -143,7 +143,7 @@ class P4Switch(Switch):
                 args.extend(['-i', str(port) + "@" + intf.name])
         if self.pcap_dump:
             logging.debug("Enabling pcap dump for switch: %s", self.name)
-            args.append("--pcap=/home/p4/other-p4/packet-aggregator-p4/l2_aggregator/pcap")
+            args.append("--pcap=/home/p4/other-p4/packet-aggregator-p4/l3_aggregator/pcap")
             logging.debug("Pcap dump enabled.")
         if self.nanomsg:
             logging.debug("Using nanomsg endpoint: %s", self.nanomsg)
@@ -174,7 +174,7 @@ class P4Switch(Switch):
         cmd = ' '.join(args)
         info(cmd + "\n")
 
-        logfile = "/home/p4/other-p4/packet-aggregator-p4/l2_aggregator/logs/devices/p4s.{}.log".format(self.name)
+        logfile = "/home/p4/other-p4/packet-aggregator-p4/l3_aggregator/logs/devices/p4s.{}.log".format(self.name)
         pid = None
         with tempfile.NamedTemporaryFile() as f:
             self.cmd(cmd + ' >' + logfile + ' 2>&1 & echo $! >> ' + f.name)

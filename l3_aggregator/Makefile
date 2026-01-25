@@ -17,18 +17,18 @@ compiled_json := $(P4_FILES:%.p4=$(BUILD_DIR)/%.json)
 all: build run
 
 run:
-	@echo "Running L2 Aggregator..."
+	@echo "Running L3 Aggregator..."
 	cd mininet ; sudo ./run_emu.py
 
 build_aggregator:	dirs $(compiled_json)
-	@echo "Building L2 Aggregator..."
-	$(P4C) --p4v 16 $(P4C_ARGS_AGG) -o $(BUILD_DIR)/l2_aggregate.json \
+	@echo "Building L3 Aggregator..."
+	$(P4C) --p4v 16 $(P4C_ARGS_AGG) -o $(BUILD_DIR)/l3_aggregate.json \
 		src/aggregator/main.p4
 	@echo "Building Succeeded..."
 
 build_splitter:	dirs $(compiled_json)
-	@echo "Building L2 Splitter..."
-	$(P4C) --p4v 16 $(P4C_ARGS_SPL) -o $(BUILD_DIR)/l2_split.json \
+	@echo "Building L3 Splitter..."
+	$(P4C) --p4v 16 $(P4C_ARGS_SPL) -o $(BUILD_DIR)/l3_split.json \
 		src/splitter/main.p4
 	@echo "Building Succeeded..."\
 
