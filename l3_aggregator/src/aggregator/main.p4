@@ -11,7 +11,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             EtherType.ARP:  parse_arp;
-            EtherType.IPV4: parse_l3;
+            EtherType.IPV4: parse_ipv4;
             default:        accept;
         }
     }
@@ -21,7 +21,15 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         transition accept;
     }
 
-    state parse_l3 {
+    state parse_ipv4 {
+        pkt.extract(hdr.ipv4);
+        transition select(hdr.ipv4.protocol) {
+            1: parse_l4; // ICMP
+            default: accept;
+        }
+    }
+
+    state parse_l4 {
         pkt.extract(hdr.payload[0]);
         transition accept;
     }

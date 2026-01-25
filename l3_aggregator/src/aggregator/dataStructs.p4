@@ -14,7 +14,7 @@ typedef bit<32> ip4Addr_t;
 */
 
 register <bit<6>>(MAX_FLOWS)               register_count;
-register<bit<672>>(MAX_FLOWS * MAX_SEG)    register_data;
+register<bit<512>>(MAX_FLOWS * MAX_SEG)    register_data;
 
 /* 
 ------- Define headers --------
@@ -37,12 +37,27 @@ header arp_t {
   ip4Addr_t dst_ip;
 }
 
+header ipv4_t {
+    bit<4>    version;
+    bit<4>    ihl;
+    bit<8>    diffserv;
+    bit<16>   totalLen;
+    bit<16>   identification;
+    bit<3>    flags;
+    bit<13>   fragOffset;
+    bit<8>    ttl;
+    bit<8>    protocol;
+    bit<16>   hdrChecksum;
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+}
+
 header eth_payload_t {
     // bit<160> ipv4;
     // bit<64> udp;
     // bit<32> coap;
     // bit<16> payload;
-    bit<672> data;
+    bit<512> data;
 }
 
 header aggmeta_t {
@@ -70,6 +85,7 @@ enum bit<16> ArpOpCode {
 struct headers {
     ethernet_t   ethernet;
     arp_t        arp;
+    ipv4_t       ipv4;
     aggmeta_t    aggmeta;
     eth_payload_t[MAX_SEG - 1] payload;
 }
