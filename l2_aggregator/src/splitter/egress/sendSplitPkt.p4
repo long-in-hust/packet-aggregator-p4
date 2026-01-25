@@ -21,25 +21,3 @@ action formSegPacket() {
     current_head = (current_head + 1) % MAX_SEG_BUF;
     head_tail_index.write(0, current_head); // update head index
 }
-
-// L2 forwarding logic
-action sendPacket(egressSpec_t port) {
-    std_meta.egress_spec = port;
-}
-
-action sendSegPacket(egressSpec_t port) {
-    std_meta.egress_spec = port;
-}
-
-table eth_forward{
-    actions = {
-        sendSegPacket;
-        sendPacket;
-        drop;
-    }
-    key = {
-        hdr.ethernet.dstAddr: exact;
-    }
-    size = 40;
-    default_action = drop();
-}
