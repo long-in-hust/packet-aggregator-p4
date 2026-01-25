@@ -1,7 +1,7 @@
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 
-const bit<10> MAX_SEG_BUF   = 512; // maximum aggregation flows
+const bit<10> MAX_SEG_BUF   = 512; // maximum aggregation segments in buffer
 // const int MAX_FLOWS   = 3; // maximum aggregation flows
 const int MAX_SEG   = 256; // maximum segments per aggregation flow
 // const int MAX_AGG_SIZE_BYTE = 1024; // maximum aggregation size in bytes
@@ -17,7 +17,7 @@ typedef bit<32> ip4Addr_t;
 ------ Registers ------
 */
 
-register<bit<272>>((bit<32>)MAX_SEG_BUF)    register_data;
+register<bit<512>>((bit<32>)MAX_SEG_BUF)    register_data;
 register<bit<10>>(1)               count_variable;
 register<bit<10>>(2)               head_tail_index;
 
@@ -47,7 +47,7 @@ header eth_payload_t {
     // bit<64> udp;
     // bit<32> coap;
     // bit<16> payload;
-    bit<272> data;
+    bit<512> data;
 }
 
 header aggmeta_t {
