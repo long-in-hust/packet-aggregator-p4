@@ -7,8 +7,8 @@ PCAP_DIR = pcap
 P4C = p4c-bm2-ss
 MININET = /home/p4/src/p4dev-python-venv/bin/mn
 PYTHON = /home/p4/src/p4dev-python-venv/bin/python
-P4C_ARGS_AGG = --p4runtime-files $(BUILD_DIR)/l2_aggregate.p4info.txtpb --p4runtime-format text
-P4C_ARGS_SPL = --p4runtime-files $(BUILD_DIR)/l2_split.p4info.txtpb --p4runtime-format text
+P4C_ARGS_AGG = --p4runtime-files $(BUILD_DIR)/l3_aggregate.p4info.txtpb --p4runtime-format text
+P4C_ARGS_SPL = --p4runtime-files $(BUILD_DIR)/l3_split.p4info.txtpb --p4runtime-format text
 source := $(wildcard $(SRC_DIR)/*.p4)
 P4_FILES := $(notdir $(source))
 

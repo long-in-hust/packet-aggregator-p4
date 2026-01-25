@@ -61,11 +61,13 @@ control sw_ingress(inout headers hdr, inout metadata mta,
                 arp_learning.apply();
             }
             else {
-                if (hdr.ethernet.etherType == EtherType.L3AGG) {
-                    NoAction();
-                }
-                else {
-                    aggr_buffer.apply();
+                if (hdr.ipv4.isValid()) {
+                    if (hdr.ipv4.protocol == Ipv4Protocol.L3AGG) {
+                        NoAction();
+                    }
+                    else {
+                        aggr_buffer.apply();
+                    }
                 }
                 eth_forward.apply();
             }
@@ -120,6 +122,7 @@ control sw_deparser(packet_out pkt, in headers hdr) {
     apply {
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.arp);
+        pkt.emit(hdr.ipv4);
         pkt.emit(hdr.aggmeta);
         pkt.emit(hdr.payload);
     }

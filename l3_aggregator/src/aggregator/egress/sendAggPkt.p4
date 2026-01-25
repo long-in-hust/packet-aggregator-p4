@@ -166,8 +166,8 @@ action formAggPacket() {
             hdr.payload[29].data = segment_data;
         }
 
-        // change ethernet type to indicate aggregated packet
-        hdr.ethernet.etherType = EtherType.L3AGG;
+        // change protocol of IPv4 to indicate aggregated packet
+        hdr.ipv4.protocol = Ipv4Protocol.L3AGG;
 
         // set aggmeta header
         hdr.aggmeta.setValid();
