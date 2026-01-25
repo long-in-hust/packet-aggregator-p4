@@ -2,3 +2,5 @@ build
 logs
 logs/**
 pcap
+**/__pycache__
+**/*.pyc
