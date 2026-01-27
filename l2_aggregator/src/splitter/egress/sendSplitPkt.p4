@@ -1,8 +1,16 @@
 // this will be implemented in the egress control
 
 action formSegPacket() {
+    // debug only
+    stdmeta_logger.write(0, std_meta.instance_type);
+
+    if (std_meta.instance_type == 1) {
+        recirculate_preserving_field_list(1);
+    }
+    
     // change etherType to ARP to forward to host
     hdr.ethernet.etherType = EtherType.IPV4;
+
     // make payload valid again and set data
     hdr.payload[0].setValid();
     register_data.read(hdr.payload[0].data, (bit<32>)0);

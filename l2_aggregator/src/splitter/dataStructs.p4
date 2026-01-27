@@ -21,6 +21,8 @@ register<bit<512>>((bit<32>)MAX_SEG_BUF)    register_data;
 register<bit<10>>(1)               count_variable;
 register<bit<10>>(2)               head_tail_index;
 
+register<bit<32>>(1) stdmeta_logger; // debug only
+
 /* 
 ------- Define headers --------
 */
@@ -82,5 +84,7 @@ struct headers {
 struct metadata {
     bit<16> aggSize_bit;
     bit<8> segCountRemaining;
-    bool usedInSplit;
+    // bool usedInSplit;
+    @field_list(1)
+    bool clone_recirculate;
 }

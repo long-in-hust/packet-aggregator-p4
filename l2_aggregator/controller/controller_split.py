@@ -5,6 +5,12 @@ import os
 from time import sleep
 import p4runtime_lib.bmv2
 import p4runtime_lib.helper
+# For clone session
+import grpc
+from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
+from p4.config.v1 import p4info_pb2
+from google.protobuf import text_format
+
 
 # Splitter switch
 # Read table entries
@@ -57,6 +63,9 @@ def writeForwardingRules(p4info_helper, sw, dst_mac, out_port):
     sw.WriteTableEntry(table_entry)
     print("Install Forwarding rule into switch %s" % sw.name)
 
+def createCloneSession(sw, session_id, replicas):
+    sw.insertCloneSession(session_id, replicas)
+
 def main(p4info_file_path, bmv2_file_path):
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(p4info_file_path)
 
@@ -97,9 +106,15 @@ def main(p4info_file_path, bmv2_file_path):
     for mac in switch_port['s2']:
         writeForwardingRules(p4info_helper, sw=s2, dst_mac=mac, out_port=switch_port['s2'][mac])
     
-    # # Aggregation buffer rules
-    # writeSplitBufferRules(p4info_helper, sw=s2, dst_mac='00:00:00:00:00:03', agg_flow_id=0)
-    # writeSplitBufferRules(p4info_helper, sw=s2, dst_mac='00:00:00:00:00:04', agg_flow_id=1)
+    # Create clone session on s2
+    replicas = [
+        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1},
+        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1},
+        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1},
+        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1},
+        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1}
+    ]
+    createCloneSession(s2, session_id=1, replicas=replicas)
 
     # Read table entries to check changes
     readTableRules(p4info_helper, s2)
