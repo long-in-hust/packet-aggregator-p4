@@ -7,11 +7,11 @@ Date: 2026/01/26
 Time: 0:32
 
 - Aggregator switch: Data plane is finished, Control plane is finished
-- Splitter switch: Data plane is in progress, Control plane is not done yet
+- Splitter switch: Data plane is being tested, Control plane is finished
 
 ### L3 aggregation
 Date: 2026/01/26
 Time: 0:32
 
 - Aggregator switch: Data plane is finished, Control plane is finished
-- Splitter switch: Data plane is in progress, Control plane is not done yet
+- Splitter switch: Data plane is in progress, Control plane will be ported
