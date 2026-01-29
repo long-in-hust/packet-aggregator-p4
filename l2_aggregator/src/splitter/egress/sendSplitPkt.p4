@@ -2,10 +2,19 @@
 
 action formSegPacket() {
     // debug only
-    stdmeta_logger.write(0, std_meta.instance_type);
+    // stdmeta_logger.write(0, std_meta.instance_type);
 
-    if (std_meta.instance_type == 1) {
-        recirculate_preserving_field_list(1);
+    // if (std_meta.instance_type == 1) {
+    //     recirculate_preserving_field_list(1);
+    // }
+
+    // read the count variable
+    bit<10> current_count;
+    count_variable.read(current_count, 0);
+    if (current_count == 0) {
+        // no segments to send, drop packet
+        drop();
+        return;
     }
     
     // change etherType to ARP to forward to host
@@ -19,8 +28,6 @@ action formSegPacket() {
     hdr.aggmeta.setInvalid();
 
     // pop the buffer count
-    bit<10> current_count;
-    count_variable.read(current_count, 0);
     current_count = current_count - 1;
     count_variable.write(0, current_count);
 

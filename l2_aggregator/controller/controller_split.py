@@ -108,10 +108,6 @@ def main(p4info_file_path, bmv2_file_path):
     
     # Create clone session on s2
     replicas = [
-        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1},
-        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1},
-        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1},
-        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1},
         {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1}
     ]
     createCloneSession(s2, session_id=1, replicas=replicas)
