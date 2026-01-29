@@ -51,19 +51,12 @@ control sw_ingress(inout headers hdr, inout metadata mta,
     }
     
     #include "ingress/splitBuffer.p4"
-    #include "ingress/L2Actions.p4"
 
     apply {
         if (hdr.ethernet.isValid())
         {
-            if (hdr.ethernet.etherType == EtherType.ARP && hdr.arp.isValid()) {
-                arp_learning.apply();
-            }
-            else {
-                if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
-                    save_buffer();
-                }
-                eth_forward.apply();
+            if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
+                save_buffer();
             }
         }
         else {
@@ -87,6 +80,7 @@ control sw_egress(inout headers hdr, inout metadata mta,
             if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
                 formSegPacket();
             }
+            eth_forward.apply();
         }
         else {
             drop();
