@@ -106,17 +106,17 @@ def main(p4info_file_path, bmv2_file_path):
         writeArpRules(p4info_helper, sw=s1, arp_request_ip=ip, arp_reply_mac=hosts_mac[ip])
     
     # Forwarding rules
-    writeForwardingRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:01', out_port=switch_port['s1']['00:00:00:00:00:01'])
-    writeForwardingRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', out_port=switch_port['s1']['00:00:00:00:00:04'])
-    
+    for mac in switch_port['s1']:
+        writeForwardingRules(p4info_helper, sw=s1, dst_mac=mac, out_port=switch_port['s1'][mac])
+        
     # Aggregation buffer rules
     writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03', agg_flow_id=0)
-    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', agg_flow_id=1)
+    # writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', agg_flow_id=1)
 
     # Egress rules
     # For aggregated packets
     writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03')
-    writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04')  
+    # writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04')
 
     # Read table entries to check changes
     readTableRules(p4info_helper, s1)
@@ -125,10 +125,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='P4Runtime Controller')
     parser.add_argument('--p4info', help='p4info proto in text format from p4c',
                         type=str, action="store", required=False,
-                        default='./build/l3_switch.p4info')
+                        default='./build/l2_switch.p4info')
     parser.add_argument('--bmv2-json', help='BMv2 JSON file from p4c',
                         type=str, action="store", required=False,
-                        default='./build/l3_switch.json')
+                        default='./build/l2_switch.json')
     args = parser.parse_args()
 
     if not os.path.exists(args.p4info):

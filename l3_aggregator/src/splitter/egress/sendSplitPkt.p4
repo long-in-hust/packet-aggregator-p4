@@ -17,8 +17,8 @@ action formSegPacket() {
         return;
     }
     
-    // change etherType to ARP to forward to host
-    hdr.ethernet.etherType = EtherType.IPV4;
+    // change IPV4 protocol value to ICMP
+    hdr.ipv4.protocol = Ipv4Protocol.ICMP;
 
     // make payload valid again and set data
     hdr.payload[0].setValid();

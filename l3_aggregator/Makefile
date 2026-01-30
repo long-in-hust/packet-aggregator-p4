@@ -34,6 +34,14 @@ build_splitter:	dirs $(compiled_json)
 
 build: build_aggregator build_splitter
 
+
+load_controller:
+	@echo "Loading Controller..."
+	$(PYTHON) controller/controller_agg.py --p4info $(BUILD_DIR)/l3_aggregate.p4info.txtpb \
+		--bmv2-json $(BUILD_DIR)/l3_aggregate.json ; \
+	$(PYTHON) controller/controller_split.py --p4info $(BUILD_DIR)/l3_split.p4info.txtpb \
+		--bmv2-json $(BUILD_DIR)/l3_split.json
+
 dirs:
 	mkdir -p $(BUILD_DIR) $(LOG_DIR) $(LOGS_DEVICES_DIR) $(PCAP_DIR)
 
