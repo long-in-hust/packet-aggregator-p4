@@ -44,6 +44,21 @@ header arp_t {
   ip4Addr_t dst_ip;
 }
 
+header ipv4_t {
+    bit<4>    version;
+    bit<4>    ihl;
+    bit<8>    diffserv;
+    bit<16>   totalLen;
+    bit<16>   identification;
+    bit<3>    flags;
+    bit<13>   fragOffset;
+    bit<8>    ttl;
+    bit<8>    protocol;
+    bit<16>   hdrChecksum;
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+}
+
 header eth_payload_t {
     // bit<160> ipv4;
     // bit<64> udp;
@@ -62,8 +77,13 @@ header aggmeta_t {
 */
 enum bit<16> EtherType {
   IPV4      = 0x0800,
-  ARP       = 0x0806,
-  L3AGG     = 0x1216
+  ARP       = 0x0806
+}
+
+enum bit<8> Ipv4Protocol {
+  UDP       = 0x11,
+  ICMP      = 0x01,
+  L4AGG     = 0x96
 }
 
 enum bit<16> ArpOpCode {
@@ -77,6 +97,7 @@ enum bit<16> ArpOpCode {
 struct headers {
     ethernet_t   ethernet;
     arp_t        arp;
+    ipv4_t       ipv4;
     aggmeta_t    aggmeta;
     eth_payload_t[MAX_SEG - 1] payload;
 }
