@@ -1,4 +1,4 @@
-// L2 Split buffer logic
+// L3 Split buffer logic
 
 action save_buffer() {
     bit<8> count = hdr.aggmeta.segCount;

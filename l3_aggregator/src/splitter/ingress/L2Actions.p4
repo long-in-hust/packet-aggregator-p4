@@ -27,7 +27,7 @@ table arp_learning{
     default_action = drop();
 }
 
-// L2 forwarding logic
+// L3 forwarding logic
 action forward(egressSpec_t port) {
     std_meta.egress_spec = port;
 }

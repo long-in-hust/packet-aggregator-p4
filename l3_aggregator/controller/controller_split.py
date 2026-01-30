@@ -119,10 +119,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='P4Runtime Controller')
     parser.add_argument('--p4info', help='p4info proto in text format from p4c',
                         type=str, action="store", required=False,
-                        default='./build/l2_switch.p4info')
+                        default='./build/l3_switch.p4info')
     parser.add_argument('--bmv2-json', help='BMv2 JSON file from p4c',
                         type=str, action="store", required=False,
-                        default='./build/l2_switch.json')
+                        default='./build/l3_switch.json')
     args = parser.parse_args()
 
     if not os.path.exists(args.p4info):

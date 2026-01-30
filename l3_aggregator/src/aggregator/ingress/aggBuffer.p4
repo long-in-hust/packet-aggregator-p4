@@ -1,4 +1,4 @@
-// L2 Aggregation logic
+// L3 Aggregation logic
 
 action save_buffer(bit<8> aggId) {
     // set aggId in metadata
