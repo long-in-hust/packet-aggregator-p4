@@ -14,7 +14,7 @@ typedef bit<32> ip4Addr_t;
 */
 
 register <bit<6>>(MAX_FLOWS)               register_count;
-register<bit<512>>(MAX_FLOWS * MAX_SEG)    register_data;
+register<bit<144>>(MAX_FLOWS * MAX_SEG)    register_data;
 
 /* 
 ------- Define headers --------
@@ -57,7 +57,7 @@ header eth_payload_t {
     // bit<64> udp;
     // bit<32> coap;
     // bit<16> payload;
-    bit<512> data;
+    bit<144> data;
 }
 
 header aggmeta_t {

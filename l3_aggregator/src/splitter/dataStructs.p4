@@ -17,7 +17,7 @@ typedef bit<32> ip4Addr_t;
 ------ Registers ------
 */
 
-register<bit<512>>((bit<32>)MAX_SEG_BUF)    register_data;
+register<bit<144>>((bit<32>)MAX_SEG_BUF)    register_data;
 register<bit<10>>(1)               count_variable;
 register<bit<10>>(2)               head_tail_index;
 
@@ -64,7 +64,7 @@ header eth_payload_t {
     // bit<64> udp;
     // bit<32> coap;
     // bit<16> payload;
-    bit<512> data;
+    bit<144> data;
 }
 
 header aggmeta_t {

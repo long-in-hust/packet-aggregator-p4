@@ -6,13 +6,13 @@ action formAggPacket() {
     // read count
     bit<6> count;
     register_count.read(count, (bit<32>)aggId);
-    bit<11> size_in_bytes = ((bit<11>)count + 1) * 64;
+    bit<11> size_in_bytes = ((bit<11>)count + 1) * 18;
 
     if ((bit<11>)size_in_bytes > MAX_AGG_SIZE_BYTE) {
         // ---- if max size will be exceeded with the next packet ----
         // construct aggregated payload - unrolled loop
         bit<32> base_index = (bit<32>)aggId * (bit<32>)MAX_SEG;
-        bit<512> segment_data;
+        bit<144> segment_data;
         
         // Unroll for max possible count (MAX_AGG_SIZE_BYTE * 8 / 272 = ~30 segments)
         if (count > 0) {
