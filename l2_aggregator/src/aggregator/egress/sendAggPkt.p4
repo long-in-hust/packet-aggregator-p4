@@ -6,7 +6,7 @@ action formAggPacket() {
     // read count
     bit<6> count;
     register_count.read(count, (bit<32>)aggId);
-    bit<11> size_in_bytes = ((bit<11>)count + 1) * 84;
+    bit<11> size_in_bytes = ((bit<11>)count + 1) * 38;
 
     if ((bit<11>)size_in_bytes > MAX_AGG_SIZE_BYTE) {
         // ---- if max size will be exceeded with the next packet ----

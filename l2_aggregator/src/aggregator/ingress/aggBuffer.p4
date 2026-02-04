@@ -9,7 +9,7 @@ action save_buffer(bit<8> aggId) {
     count = count + 1; // calculate new count in advance to predict if max size will be reached
 
     // write data  
-    if ((bit<11>)count * 84 <= MAX_AGG_SIZE_BYTE && count < 63) {
+    if ((bit<11>)count * 38 <= MAX_AGG_SIZE_BYTE && count < 63) {
         // ---- if max size is not reached ----
         // must be count - 1 because the new payload starts from the old count
         bit<32> write_index = (bit<32>)aggId * MAX_SEG + (bit<32>)count - 1;
