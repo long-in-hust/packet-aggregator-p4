@@ -12,7 +12,7 @@ action formAggPacket() {
         // ---- if max size will be exceeded with the next packet ----
         // construct aggregated payload - unrolled loop
         bit<32> base_index = (bit<32>)aggId * (bit<32>)MAX_SEG;
-        bit<672> segment_data;
+        bit<304> segment_data;
         
         // Unroll for max possible count (MAX_AGG_SIZE_BYTE * 8 / 272 = ~30 segments)
         if (count > 0) {
