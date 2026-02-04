@@ -11,7 +11,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             EtherType.ARP:  parse_arp;
-            EtherType.L3AGG: parse_l3agg;
+            EtherType.IPV4: parse_ipv4;
             default:        accept;
         }
     }
@@ -21,7 +21,15 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         transition accept;
     }
 
-    state parse_l3agg {
+    state parse_ipv4 {
+        pkt.extract(hdr.ipv4);
+        transition select(hdr.ipv4.protocol) {
+            Ipv4Protocol.L4AGG: parse_l4agg;
+            default: accept;
+        }
+    }
+
+    state parse_l4agg {
         pkt.extract(hdr.aggmeta);
         mta.segCountRemaining = hdr.aggmeta.segCount;
         transition parse_payloads;
@@ -51,12 +59,21 @@ control sw_ingress(inout headers hdr, inout metadata mta,
     }
     
     #include "ingress/splitBuffer.p4"
+    #include "ingress/L2Actions.p4"
 
     apply {
         if (hdr.ethernet.isValid())
         {
-            if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
-                save_buffer();
+            if (hdr.ethernet.etherType == EtherType.ARP && hdr.arp.isValid()) {
+                arp_learning.apply();
+            }
+            else {
+                if (hdr.ethernet.etherType == EtherType.IPV4) {
+                    if (hdr.ipv4.protocol == Ipv4Protocol.L4AGG && hdr.aggmeta.isValid()) {
+                        save_buffer();
+                    }
+                }
+                eth_forward.apply();
             }
         }
         else {
@@ -77,10 +94,11 @@ control sw_egress(inout headers hdr, inout metadata mta,
     apply {
         if (hdr.ethernet.isValid())
         {
-            if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
-                formSegPacket();
+            if (hdr.ethernet.etherType == EtherType.IPV4) {
+                if (hdr.ipv4.protocol == Ipv4Protocol.L4AGG && hdr.aggmeta.isValid()) {
+                    formSegPacket();
+                }
             }
-            eth_forward.apply();
         }
         else {
             drop();
@@ -97,7 +115,8 @@ control sw_deparser(packet_out pkt, in headers hdr) {
     apply {
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.arp);
-        pkt.emit(hdr.aggmeta);
+        pkt.emit(hdr.ipv4);
+        // pkt.emit(hdr.aggmeta);
         pkt.emit(hdr.payload[0]);
     }
 }

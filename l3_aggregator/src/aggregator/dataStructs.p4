@@ -71,13 +71,12 @@ header aggmeta_t {
 enum bit<16> EtherType {
   IPV4      = 0x0800,
   ARP       = 0x0806
-//   L3AGG     = 0x1216
 }
 
 enum bit<8> Ipv4Protocol {
   UDP       = 0x11,
   ICMP      = 0x01,
-  L3AGG     = 0x96
+  L4AGG     = 0x96
 }
 
 enum bit<16> ArpOpCode {

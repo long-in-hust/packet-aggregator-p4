@@ -62,7 +62,7 @@ control sw_ingress(inout headers hdr, inout metadata mta,
             }
             else {
                 if (hdr.ipv4.isValid()) {
-                    if (hdr.ipv4.protocol == Ipv4Protocol.L3AGG) {
+                    if (hdr.ipv4.protocol == Ipv4Protocol.L4AGG) {
                         NoAction();
                     }
                     else {

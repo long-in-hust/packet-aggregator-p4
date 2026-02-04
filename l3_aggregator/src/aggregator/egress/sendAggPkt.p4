@@ -167,7 +167,7 @@ action formAggPacket() {
         }
 
         // change protocol of IPv4 to indicate aggregated packet
-        hdr.ipv4.protocol = Ipv4Protocol.L3AGG;
+        hdr.ipv4.protocol = Ipv4Protocol.L4AGG;
 
         // set aggmeta header
         hdr.aggmeta.setValid();
