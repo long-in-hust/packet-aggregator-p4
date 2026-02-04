@@ -87,3 +87,30 @@ class SwitchConnection(object):
         else:
             for response in self.client_stub.Read(request):
                 yield response
+    
+    def insertCloneSession(self, session_id, replicas):
+        """Insert a P4Runtime clone session.
+        replicas: iterable of (egress_port, instance) or dicts with keys 'egress_port' and 'instance'.
+        """
+        print("Inserting clone session %d" % session_id)
+        request = p4runtime_pb2.WriteRequest()
+        request.device_id = self.device_id
+        update = request.updates.add()
+        update.type = p4runtime_pb2.Update.INSERT
+        clone_entry = update.entity.packet_replication_engine_entry.clone_session_entry
+        clone_entry.session_id = int(session_id)
+
+        for rep in replicas:
+            if isinstance(rep, dict):
+                egress = rep.get('egress_port', 0)
+                instance = rep.get('instance', 0)
+            else:
+                egress, instance = rep
+            r = clone_entry.replicas.add()
+            r.egress_port = int(egress)
+            r.instance = int(instance)
+
+        try:
+            self.client_stub.Write(request)
+        except grpc.RpcError as e:
+            print("P4 Runtime Write error inserting clone session: %s" % e)

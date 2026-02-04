@@ -1,7 +1,7 @@
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 
-const bit<10> MAX_SEG_BUF   = 512; // maximum aggregation flows
+const bit<10> MAX_SEG_BUF   = 512; // maximum aggregation segments in buffer
 // const int MAX_FLOWS   = 3; // maximum aggregation flows
 const int MAX_SEG   = 256; // maximum segments per aggregation flow
 // const int MAX_AGG_SIZE_BYTE = 1024; // maximum aggregation size in bytes
@@ -17,9 +17,11 @@ typedef bit<32> ip4Addr_t;
 ------ Registers ------
 */
 
-register<bit<272>>((bit<32>)MAX_SEG_BUF)    register_data;
+register<bit<512>>((bit<32>)MAX_SEG_BUF)    register_data;
 register<bit<10>>(1)               count_variable;
 register<bit<10>>(2)               head_tail_index;
+
+register<bit<32>>(1) stdmeta_logger; // debug only
 
 /* 
 ------- Define headers --------
@@ -42,12 +44,27 @@ header arp_t {
   ip4Addr_t dst_ip;
 }
 
+header ipv4_t {
+    bit<4>    version;
+    bit<4>    ihl;
+    bit<8>    diffserv;
+    bit<16>   totalLen;
+    bit<16>   identification;
+    bit<3>    flags;
+    bit<13>   fragOffset;
+    bit<8>    ttl;
+    bit<8>    protocol;
+    bit<16>   hdrChecksum;
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+}
+
 header eth_payload_t {
     // bit<160> ipv4;
     // bit<64> udp;
     // bit<32> coap;
     // bit<16> payload;
-    bit<272> data;
+    bit<512> data;
 }
 
 header aggmeta_t {
@@ -60,8 +77,13 @@ header aggmeta_t {
 */
 enum bit<16> EtherType {
   IPV4      = 0x0800,
-  ARP       = 0x0806,
-  L3AGG     = 0x1216
+  ARP       = 0x0806
+}
+
+enum bit<8> Ipv4Protocol {
+  UDP       = 0x11,
+  ICMP      = 0x01,
+  L4AGG     = 0x96
 }
 
 enum bit<16> ArpOpCode {
@@ -75,6 +97,7 @@ enum bit<16> ArpOpCode {
 struct headers {
     ethernet_t   ethernet;
     arp_t        arp;
+    ipv4_t       ipv4;
     aggmeta_t    aggmeta;
     eth_payload_t[MAX_SEG - 1] payload;
 }
@@ -82,5 +105,7 @@ struct headers {
 struct metadata {
     bit<16> aggSize_bit;
     bit<8> segCountRemaining;
-    bool usedInSplit;
+    // bool usedInSplit;
+    @field_list(1)
+    bool resubmitted;
 }

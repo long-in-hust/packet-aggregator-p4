@@ -1,4 +1,4 @@
-// L2 Aggregation logic
+// L3 Aggregation logic
 
 action save_buffer(bit<8> aggId) {
     // set aggId in metadata
@@ -15,7 +15,7 @@ action save_buffer(bit<8> aggId) {
         bit<32> write_index = (bit<32>)aggId * MAX_SEG + (bit<32>)count - 1;
         register_data.write(write_index, hdr.payload[0].data);
         register_count.write((bit<32>)aggId, (bit<6>)count);
-        mta.aggSize_bit = (bit<16>)count * 272;
+        mta.aggSize_bit = (bit<16>)count * 512;
     }
     else {
         drop();

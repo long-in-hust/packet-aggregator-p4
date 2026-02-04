@@ -106,17 +106,17 @@ def main(p4info_file_path, bmv2_file_path):
         writeArpRules(p4info_helper, sw=s1, arp_request_ip=ip, arp_reply_mac=hosts_mac[ip])
     
     # Forwarding rules
-    writeForwardingRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:01', out_port=switch_port['s1']['00:00:00:00:00:01'])
-    writeForwardingRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', out_port=switch_port['s1']['00:00:00:00:00:04'])
-    
+    for mac in switch_port['s1']:
+        writeForwardingRules(p4info_helper, sw=s1, dst_mac=mac, out_port=switch_port['s1'][mac])
+        
     # Aggregation buffer rules
     writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03', agg_flow_id=0)
-    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', agg_flow_id=1)
+    # writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', agg_flow_id=1)
 
     # Egress rules
     # For aggregated packets
     writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03')
-    writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04')  
+    # writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04')
 
     # Read table entries to check changes
     readTableRules(p4info_helper, s1)
