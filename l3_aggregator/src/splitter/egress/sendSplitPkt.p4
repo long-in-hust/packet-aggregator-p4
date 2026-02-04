@@ -32,8 +32,8 @@ action formSegPacket() {
 
     // make payload valid again and set data
     hdr.payload[0].setValid();
-    register_data.read(hdr.payload[0].data, (bit<32>)0);
-    
+    register_data.read(hdr.payload[0].data, (bit<32>)current_head);
+
     current_head = (current_head + 1) % MAX_SEG_BUF;
     head_tail_index.write(0, current_head); // update head index
 }
