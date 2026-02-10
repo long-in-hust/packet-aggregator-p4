@@ -25,11 +25,11 @@ action save_buffer(bit<8> aggId) {
 table aggr_buffer {
     actions = {
         save_buffer;
-        drop;
+        NoAction;
     }
     key = {
         hdr.ethernet.dstAddr: exact;
     }
     size = 64;
-    default_action = drop();
+    default_action = NoAction();
 }
