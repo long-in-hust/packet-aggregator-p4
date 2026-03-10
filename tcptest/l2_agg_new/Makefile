@@ -34,11 +34,11 @@ build_splitter:	dirs $(compiled_json)
 
 build: build_aggregator build_splitter
 
-load_controller:
-	@echo "Loading Controller..."
-	$(PYTHON) controller/controller_agg.py --p4info $(BUILD_DIR)/l2_aggregate.p4info.txtpb \
+load_ctrl_plane:
+	@echo "Loading ctrl_plane..."
+	$(PYTHON) ctrl_plane/ctrl_plane_agg.py --p4info $(BUILD_DIR)/l2_aggregate.p4info.txtpb \
 		--bmv2-json $(BUILD_DIR)/l2_aggregate.json ; \
-	$(PYTHON) controller/controller_split.py --p4info $(BUILD_DIR)/l2_split.p4info.txtpb \
+	$(PYTHON) ctrl_plane/ctrl_plane_split.py --p4info $(BUILD_DIR)/l2_split.p4info.txtpb \
 		--bmv2-json $(BUILD_DIR)/l2_split.json
 
 dirs:
