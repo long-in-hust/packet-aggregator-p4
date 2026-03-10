@@ -1,6 +1,6 @@
-const int MAX_FLOWS   = 3; // maximum aggregation flows
-const int MAX_SEG   = 256; // maximum segments per aggregation flow
-const int MAX_AGG_SIZE_BYTE = 512; // maximum aggregation size in bytes
+const int MAX_SEG = 63; // maximum number of segments to aggregate (including the first one)
+const int MIN_BATCH_SIZE_BYTES = 96; // minimum batch size to trigger aggregation
+const int MAX_BATCH_SIZE_BYTES = 512; // maximum batch size to trigger aggregation
 
 /* 
 ------- Define custom types --------
@@ -8,13 +8,20 @@ const int MAX_AGG_SIZE_BYTE = 512; // maximum aggregation size in bytes
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+typedef bit<328> data_t; // payload data type
 
 /*
 ------ Registers ------
 */
 
-register <bit<6>>(MAX_FLOWS)               register_count;
-register<bit<304>>(MAX_FLOWS * MAX_SEG)    register_data;
+register<bit<6>>(1) current_batch_count;  
+register<bit<4>>(1) current_agg_id;       
+register<macAddr_t>(1) last_dst_addr;
+
+register<bit<1>>(1) consecutive_match;
+register<bit<1>>(1) active_queue; // 0 or 1 to indicate which queue is currently active for aggregation
+
+register<data_t>(MAX_SEG * 2) data_queues; // queue to store incoming segments for aggregation
 
 /* 
 ------- Define headers --------
@@ -42,11 +49,10 @@ header eth_payload_t {
     // bit<64> udp;
     // bit<32> coap;
     // bit<16> payload;
-    bit<304> data;
+    data_t data;
 }
 
 header aggmeta_t {
-    bit<8> aggId;
     bit<8> segCount;
 }
 
@@ -76,6 +82,6 @@ struct headers {
 
 struct metadata {
     bit<8> aggId;
-    bit<16> aggSize_bit;
-    bit<8> segOutRemaining;
+    bit<6> aggCount;
+    bit<1> toggleSendAgg;
 }

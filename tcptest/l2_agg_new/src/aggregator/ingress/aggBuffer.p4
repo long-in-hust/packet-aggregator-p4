@@ -1,35 +1,55 @@
-// L2 Aggregation logic
+action reset_batch() {
+    consecutive_match.write(0, 0);
+    bit<1> actv_q;
+    active_queue.read(actv_q, 0);
+    active_queue.write(0, actv_q ^ 1); // bit flip to toggle active queue for next batch
 
-action save_buffer(bit<8> aggId) {
-    // set aggId in metadata
-    mta.aggId = aggId;
-    // read count
+    current_batch_count.read(mta.aggCount, 0);
+    current_batch_count.write(0, 0); // reset batch count
+    mta.toggleSendAgg = 1; // set metadata to indicate batch is ready to send
+}
+
+action aggregateSaveBuffer() {
+    // get active queue
+    bit<1> actv_q;
+    active_queue.read(actv_q, 0);
+
+    consecutive_match.write(0, 1);
     bit<6> count;
-    register_count.read(count, (bit<32>)aggId);
+    current_batch_count.read(count, (bit<32>)actv_q);
     count = count + 1; // calculate new count in advance to predict if max size will be reached
 
-    // write data  
-    if ((bit<11>)count * 38 <= MAX_AGG_SIZE_BYTE && count < 63) {
-        // ---- if max size is not reached ----
-        // must be count - 1 because the new payload starts from the old count
-        bit<32> write_index = (bit<32>)aggId * MAX_SEG + (bit<32>)count - 1;
-        register_data.write(write_index, hdr.payload[0].data);
-        register_count.write((bit<32>)aggId, (bit<6>)count);
-        mta.aggSize_bit = (bit<16>)count * 272;
+    bit<1> queue_id;
+    active_queue.read(queue_id, 0); // read current active queue
+
+    // write data
+    bit<32> write_index = (bit<32>)actv_q * MAX_SEG + (bit<32>)count;
+
+    data_queues.write(write_index, hdr.payload[0].data);
+    current_batch_count.write(0, (bit<6>)count);
+    if ((int)count * 38 >= MAX_BATCH_SIZE_BYTES || count == MAX_SEG) {
+        hdr.payload[0].setInvalid();
+        reset_batch();
     }
     else {
-        drop();
+        macAddr_t last_dest_mac;
+        last_dst_addr.read(last_dest_mac, 0);
+        if (hdr.ethernet.dstAddr == last_dest_mac) {
+            drop(); // Why drop if the dst_mac is the same as the last ?
+            // Because the header is being unused
+            // If the dst_mac is different, it means
+            // the header is holding the value of the real last destination MAC due to the swap,
+            // which means that header is going to be assembled with the previously aggregated payload.
+        }
     }
 }
 
-table aggr_buffer {
-    actions = {
-        save_buffer;
-        drop;
-    }
+table aggregating {
     key = {
         hdr.ethernet.dstAddr: exact;
     }
-    size = 64;
-    default_action = drop();
+    actions = {
+        aggregateSaveBuffer;
+        NoAction;
+    }
 }

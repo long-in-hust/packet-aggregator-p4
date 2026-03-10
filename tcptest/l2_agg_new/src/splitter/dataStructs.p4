@@ -12,12 +12,13 @@ const int MAX_SEG   = 256; // maximum segments per aggregation flow
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+typedef bit<304> data_t;
 
 /*
 ------ Registers ------
 */
 
-register<bit<304>>((bit<32>)MAX_SEG_BUF)    register_data;
+register<data_t>((bit<32>)MAX_SEG_BUF)    register_data;
 register<bit<10>>(1)               count_variable;
 register<bit<10>>(2)               head_tail_index;
 
@@ -49,7 +50,7 @@ header eth_payload_t {
     // bit<64> udp;
     // bit<32> coap;
     // bit<16> payload;
-    bit<304> data;
+    data_t data;
 }
 
 header aggmeta_t {

@@ -170,6 +170,7 @@ class P4Switch(Switch):
         if self.grpc_port:
             logging.debug("Using gRPC port: %d", self.grpc_port)
             args.append("-- --grpc-server-addr 0.0.0.0:" + str(self.grpc_port))
+        args.append("-- cpu-port 510")
         
         cmd = ' '.join(args)
         info(cmd + "\n")
