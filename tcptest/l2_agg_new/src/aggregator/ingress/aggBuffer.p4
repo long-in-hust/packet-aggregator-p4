@@ -4,7 +4,7 @@ action reset_batch() {
     active_queue.read(actv_q, 0);
     active_queue.write(0, actv_q ^ 1); // bit flip to toggle active queue for next batch
 
-    current_batch_count.read(mta.aggCount, 0);
+    current_batch_count.read(mta.aggCount, 0); // get the count of segments in the batch to be sent (now inactive)
     current_batch_count.write(0, 0); // reset batch count
     mta.toggleSendAgg = 1; // set metadata to indicate batch is ready to send
 }

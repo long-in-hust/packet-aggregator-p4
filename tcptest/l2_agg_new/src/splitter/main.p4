@@ -1,6 +1,7 @@
 #include <core.p4>
 #include <v1model.p4>
 #include "dataStructs.p4"
+#include "macros/loop_unroll.p4"
 
 /* 
 ------- Switch logic --------

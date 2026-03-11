@@ -4,6 +4,7 @@
 #define CPU_PORT 510
 
 #include "dataStructs.p4"
+#include "macros/loop_unroll.p4"
 
 /* 
 ------- Switch logic --------
@@ -92,7 +93,8 @@ control sw_egress(inout headers hdr, inout metadata mta,
     apply {
         if (hdr.ethernet.isValid()) {
             if (mta.toggleSendAgg == 1) {
-                sendAggPacket();
+                formAggPacket();
+                hdr.ethernet.etherType = EtherType.L3AGG;
             }
         } else {
             drop();

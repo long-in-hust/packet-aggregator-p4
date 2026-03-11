@@ -14,8 +14,7 @@ typedef bit<328> data_t; // payload data type
 ------ Registers ------
 */
 
-register<bit<6>>(1) current_batch_count;  
-register<bit<4>>(1) current_agg_id;       
+register<bit<6>>(1) current_batch_count;      
 register<macAddr_t>(1) last_dst_addr;
 
 register<bit<1>>(1) consecutive_match;
@@ -81,7 +80,6 @@ struct headers {
 }
 
 struct metadata {
-    bit<8> aggId;
     bit<6> aggCount;
     bit<1> toggleSendAgg;
 }

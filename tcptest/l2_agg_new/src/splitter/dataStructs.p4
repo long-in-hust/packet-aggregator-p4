@@ -18,7 +18,7 @@ typedef bit<304> data_t;
 ------ Registers ------
 */
 
-register<data_t>((bit<32>)MAX_SEG_BUF)    register_data;
+register<data_t>((bit<32>)MAX_SEG_BUF)    data_queue;
 register<bit<10>>(1)               count_variable;
 register<bit<10>>(2)               head_tail_index;
 
@@ -54,7 +54,6 @@ header eth_payload_t {
 }
 
 header aggmeta_t {
-    bit<8> aggId;
     bit<8> segCount;
 }
 
@@ -83,8 +82,8 @@ struct headers {
 }
 
 struct metadata {
-    bit<16> aggSize_bit;
     bit<8> segCountRemaining;
+    bit<8> aggCount;
     // bool usedInSplit;
     @field_list(1)
     bool resubmitted;
