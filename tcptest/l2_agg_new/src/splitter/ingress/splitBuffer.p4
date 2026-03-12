@@ -12,15 +12,3 @@ action save_buffer() {
     RETRIEVE_PAYLOAD
 
 }
-
-// table split_buffer {
-//     actions = {
-//         save_buffer;
-//         drop;
-//     }
-//     key = {
-//         hdr.ethernet.dstAddr: exact;
-//     }
-//     size = 64;
-//     default_action = drop();
-// }

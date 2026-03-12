@@ -1,7 +1,7 @@
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 
-const bit<10> MAX_SEG_BUF   = 512; // maximum aggregation segments in buffer
+const bit<10> MAX_SEG_BUF   = 256; // maximum aggregation segments in buffer
 // const int MAX_FLOWS   = 3; // maximum aggregation flows
 const int MAX_SEG   = 256; // maximum segments per aggregation flow
 // const int MAX_AGG_SIZE_BYTE = 1024; // maximum aggregation size in bytes
@@ -12,7 +12,7 @@ const int MAX_SEG   = 256; // maximum segments per aggregation flow
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<304> data_t;
+typedef bit<328> data_t;
 
 /*
 ------ Registers ------
@@ -22,7 +22,7 @@ register<data_t>((bit<32>)MAX_SEG_BUF)    data_queue;
 register<bit<10>>(1)               count_variable;
 register<bit<10>>(2)               head_tail_index;
 
-register<bit<32>>(1) stdmeta_logger; // debug only
+// register<bit<32>>(1) stdmeta_logger; // debug only
 
 /* 
 ------- Define headers --------
