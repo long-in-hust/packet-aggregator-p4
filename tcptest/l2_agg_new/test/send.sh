@@ -14,7 +14,7 @@ while true; do
         pktid_str="0$pktid_str"
     fi
     echo "Sending packet ID: $pktid_str"
-    echo "pktid: $packet_id" | nc -u -w0 10.0.0.3 5000
+    echo "pktid: $pktid_str" | nc -u -w0 10.0.0.3 5000
     (((packet_id++)%10000))
     sleep 0.01
 done

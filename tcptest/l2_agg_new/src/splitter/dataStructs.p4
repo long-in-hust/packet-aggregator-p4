@@ -12,7 +12,7 @@ const int MAX_SEG   = 256; // maximum segments per aggregation flow
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<328> data_t;
+typedef bit<312> data_t;
 
 /*
 ------ Registers ------

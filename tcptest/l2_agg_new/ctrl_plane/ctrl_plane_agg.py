@@ -31,16 +31,15 @@ def writeArpRules(p4info_helper, sw, arp_request_ip, arp_reply_mac):
     sw.WriteTableEntry(table_entry)
     print("Install ARP rule into switch %s" % sw.name)
 
-def writeAggBufferRules(p4info_helper, sw, dst_mac, agg_flow_id):
+def writeAggBufferRules(p4info_helper, sw, dst_mac):
     table_entry = p4info_helper.buildTableEntry(
-            table_name="sw_ingress.aggr_buffer",
+            table_name="sw_ingress.tbl_aggregation",
             match_fields={
                 "hdr.ethernet.dstAddr":dst_mac
             },
-            action_name="sw_ingress.save_buffer",
-            action_params={
-                "aggId":agg_flow_id,
-            })
+            action_name="sw_ingress.aggregating",
+            action_params={}
+        )
     sw.WriteTableEntry(table_entry)
     print("Install Buffer rule into switch %s" % sw.name)
 
@@ -56,18 +55,6 @@ def writeForwardingRules(p4info_helper, sw, dst_mac, out_port):
             })
     sw.WriteTableEntry(table_entry)
     print("Install Forwarding rule into switch %s" % sw.name)
-
-# egress rule
-def writeEgressAggPktRules(p4info_helper, sw, dst_mac):
-    table_entry = p4info_helper.buildTableEntry(
-            table_name="sw_egress.eth_forward",
-            match_fields={
-                "hdr.ethernet.dstAddr":dst_mac
-            },
-            action_name="sw_egress.formAggPacket"
-    )
-    sw.WriteTableEntry(table_entry)
-    print("Install Egress AggPkt rule into switch %s" % sw.name)
 
 def main(p4info_file_path, bmv2_file_path):
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(p4info_file_path)
@@ -110,12 +97,12 @@ def main(p4info_file_path, bmv2_file_path):
         writeForwardingRules(p4info_helper, sw=s1, dst_mac=mac, out_port=switch_port['s1'][mac])
         
     # Aggregation buffer rules
-    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03', agg_flow_id=0)
-    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', agg_flow_id=1)
+    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03')
+    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04')
 
     # Egress rules
     # For aggregated packets
-    writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03')
+    # writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03')
     # writeEgressAggPktRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04')
 
     # Read table entries to check changes

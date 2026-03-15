@@ -2,6 +2,7 @@
 #include <v1model.p4>
 
 #define CPU_PORT 510
+#define DROP_PORT 511
 
 #include "dataStructs.p4"
 #include "macros/loop_unroll.p4"
@@ -57,22 +58,12 @@ control sw_ingress(inout headers hdr, inout metadata mta,
                 arp_learning.apply();
             }
             else {
-                macAddr_t last_dest_mac;
-                last_dst_addr.read(last_dest_mac, 0);
-                if (hdr.ethernet.dstAddr == last_dest_mac) {
-                    aggregating.apply();
+                if (hdr.ethernet.etherType == EtherType.IPV4 && hdr.payload[0].isValid()) {
+                    tbl_aggregation.apply();
                 }
-                else {
-                    last_dst_addr.write(0, hdr.ethernet.dstAddr);
-                    hdr.ethernet.dstAddr = last_dest_mac; // Yeah, this is basically a swap.
-                    // Why swapping ?
-                    // It's because this header will be used for the aggregated packet
-                    // while its payload will be saved into the other queue.
-                    // Ponzi scheme moment !
-                    reset_batch();
-                    aggregating.apply();
+                if (std_meta.egress_spec != DROP_PORT) {
+                    eth_forward.apply();
                 }
-                eth_forward.apply();
             }
         } else {
             drop();
@@ -94,7 +85,6 @@ control sw_egress(inout headers hdr, inout metadata mta,
         if (hdr.ethernet.isValid()) {
             if (mta.toggleSendAgg == 1) {
                 formAggPacket();
-                hdr.ethernet.etherType = EtherType.L3AGG;
             }
         } else {
             drop();
