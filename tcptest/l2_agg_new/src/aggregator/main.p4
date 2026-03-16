@@ -27,6 +27,8 @@ parser pkt_parser(packet_in pkt, out headers hdr,
     }
 
     state parse_l3 {
+        // udp.length + ipv4.ihl*4
+        mta.segLen = pkt.lookahead<bit<208>>()[15:0] + (bit<16>)pkt.lookahead<bit<8>>()[3:0] * 4;
         pkt.extract(hdr.payload[0]);
         transition accept;
     }

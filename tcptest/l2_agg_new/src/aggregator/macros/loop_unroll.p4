@@ -5,6 +5,10 @@
     Also, the else part with return is to avoid unnecessary iterations once all segments have been appended. Since we are decrementing mta.aggCount with each appended segment, once it reaches 0, we can stop appending and just set the EtherType and return the packet.
 */
 
+/* 
+Skip the problem with huge variation in size
+*/
+
 #define APPEND_SEGMENT                     \
     if (mta.aggCount > 0) {                           \
         index = (bit<32>)inactive_q * MAX_SEG + (bit<32>)mta.aggCount - 1;  \
@@ -19,8 +23,23 @@
         return; \
     }
 
+// Unecessary !
+#define APPEND_SEGMENT_V2                  \
+    if (mta.aggCount > 0) {                           \
+        index = (bit<32>)inactive_q * MAX_SEG + (bit<32>)mta.aggCount - 1;  \
+        data_queues.read(segment_data, index);  \
+        length_queues.read(segment_length, index); \
+        hdr.longPayload.data = (hdr.longPayload.data << 16) | (longData_t)segment_length;   \
+        hdr.longPayload.data = (hdr.longPayload.data << segment_length * 8) | (longData_t)segment_data;   \
+        mta.aggCount = mta.aggCount - 1;   \
+    }   \
+    else {  \
+         \
+        return; \
+    }
+
 #define APPEND_PAYLOAD \
-    APPEND_SEGMENT \
+    APPEND_SEGMENT_V2 \
     APPEND_SEGMENT \
     APPEND_SEGMENT \
     APPEND_SEGMENT \

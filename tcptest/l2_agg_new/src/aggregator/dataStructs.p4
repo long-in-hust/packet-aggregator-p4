@@ -7,7 +7,8 @@ const int MAX_BATCH_SIZE_BYTES = 512; // maximum batch size to trigger aggregati
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<312> data_t; // payload data type
+typedef bit<320> data_t; // payload data type
+typedef bit<4096> longData_t; // type for the aggregated payload in the egress pipeline
 
 /*
 ------ Registers ------
@@ -20,6 +21,9 @@ register<bit<1>>(1) consecutive_match;
 register<bit<1>>(1) active_queue; // 0 or 1 to indicate which queue is currently active for aggregation
 
 register<data_t>(MAX_SEG * 2) data_queues; // queue to store incoming segments for aggregation
+register<bit<16>>(MAX_SEG * 2) length_queues; // this register stores the length of each segment in the corresponding position in the data queue
+
+// register<bit<4096>>(1) agg_packet_buffer; // buffer to assemble the aggregated packet
 
 /* 
 ------- Define headers --------
@@ -58,6 +62,10 @@ header seglen_t {
     bit<16> segLen;
 }
 
+header longPayload_t {
+    longData_t data;
+}
+
 /*
 ------- Define custom enums --------
 */
@@ -68,8 +76,8 @@ enum bit<16> EtherType {
 }
 
 enum bit<16> ArpOpCode {
-  REQUEST  = 1,
-  REPLY    = 2
+    REQUEST  = 1,
+    REPLY    = 2
 }
 
 /* 
@@ -80,10 +88,12 @@ struct headers {
     arp_t        arp;
     aggmeta_t    aggmeta;
     eth_payload_t[MAX_SEG - 1] payload;
+    longPayload_t longPayload;
 }
 
 struct metadata {
     bit<6> aggCount;
     bit<1> toggleSendAgg;
     bool dstMacChanged;
+    bit<16> segLen; // length of the current segment
 }

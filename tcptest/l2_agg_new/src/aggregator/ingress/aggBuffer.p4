@@ -11,6 +11,8 @@ action aggregateSaveBuffer(bit<1> param_actv_q, bit<6> param_current_count) {
     // write data
     bit<32> write_index = (bit<32>)param_actv_q * MAX_SEG + (bit<32>)param_current_count;
     data_queues.write(write_index, hdr.payload[0].data);
+    // write length
+    length_queues.write(write_index, mta.segLen);
 
     bit<6> count = param_current_count + 1;
     current_batch_count.write((bit<32>)param_actv_q, (bit<6>)count);
