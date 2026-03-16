@@ -13,6 +13,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         transition select(hdr.ethernet.etherType) {
             EtherType.ARP:  parse_arp;
             EtherType.L3AGG: parse_l3agg;
+            EtherType.IPV4: check_ipv4;
             default:        accept;
         }
     }
@@ -26,6 +27,14 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         pkt.extract(hdr.aggmeta);
         mta.segCountRemaining = hdr.aggmeta.segCount;
         transition parse_payloads;
+    }
+
+    state check_ipv4{
+        mta.segCountRemaining = 1;
+        transition select (mta.resubmitted) {
+            true: parse_payloads;
+            default: accept;
+        }
     }
 
     state parse_payloads {
@@ -61,7 +70,7 @@ control sw_ingress(inout headers hdr, inout metadata mta,
                 arp_learning.apply();
             }
             else {
-                if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
+                if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid() && !mta.resubmitted) {
                     save_buffer();
                 }
                 eth_forward.apply();
@@ -85,7 +94,7 @@ control sw_egress(inout headers hdr, inout metadata mta,
     apply {
         if (hdr.ethernet.isValid())
         {
-            if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
+            if ((hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) || mta.resubmitted) {
                 formSegPacket();
             }
         }

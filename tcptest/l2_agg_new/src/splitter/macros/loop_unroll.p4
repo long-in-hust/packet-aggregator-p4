@@ -5,6 +5,14 @@
     Also, the else part with return is to avoid unnecessary iterations once all segments have been appended. Since we are decrementing mta.aggCount with each appended segment, once it reaches 0, we can stop appending and just set the EtherType and return the packet.
 */
 
+/**
+        if (current_count > 0) {    \
+            mta.resubmitted = true;     \
+            resubmit_preserving_field_list(1);     \
+            clone(CloneType.I2E, 1);     \
+        }     \
+**/
+
 #define POP_SEGMENT                     \
     if (mta.aggCount > 0) {                           \
         if (std_meta.instance_type == 0) {     \
@@ -19,11 +27,6 @@
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \
-        if (current_count > 0) {    \
-            mta.resubmitted = true;     \
-            resubmit_preserving_field_list(1);     \
-            clone(CloneType.I2E, 1);     \
-        }     \
         return;    \
     }
 
