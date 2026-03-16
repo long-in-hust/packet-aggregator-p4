@@ -51,6 +51,11 @@ header eth_payload_t {
 
 header aggmeta_t {
     bit<8> segCount;
+    bit<16> totalLen;
+}
+
+header seglen_t {
+    bit<16> segLen;
 }
 
 /*
