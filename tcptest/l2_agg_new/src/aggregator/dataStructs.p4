@@ -58,13 +58,14 @@ header aggmeta_t {
     bit<16> totalLen;
 }
 
-header seglen_t {
+header seg_data_t {
     bit<16> segLen;
+    data_t data;
 }
 
-header longPayload_t {
-    longData_t data;
-}
+// header longPayload_t {
+//     longData_t data;
+// }
 
 /*
 ------- Define custom enums --------
@@ -87,8 +88,10 @@ struct headers {
     ethernet_t   ethernet;
     arp_t        arp;
     aggmeta_t    aggmeta;
-    eth_payload_t[MAX_SEG - 1] payload;
-    longPayload_t longPayload;
+    eth_payload_t payload;
+    seg_data_t[MAX_SEG - 1] aggSegments;
+
+    // longPayload_t longPayload;
 }
 
 struct metadata {

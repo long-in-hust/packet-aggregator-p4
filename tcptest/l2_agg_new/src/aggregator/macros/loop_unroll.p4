@@ -13,9 +13,11 @@ Skip the problem with huge variation in size
     if (mta.aggCount > 0) {                           \
         index = (bit<32>)inactive_q * MAX_SEG + (bit<32>)mta.aggCount - 1;  \
         data_queues.read(segment_data, index);  \
-        hdr.payload.push_front(1);   \
-        hdr.payload[0].setValid();    \
-        hdr.payload[0].data = segment_data;   \
+        length_queues.read(segment_length, index);  \
+        hdr.aggSegments.push_front(1);   \
+        hdr.aggSegments[0].setValid();    \
+        hdr.aggSegments[0].data = segment_data;   \
+        hdr.aggSegments[0].segLen = segment_length;   \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \
@@ -23,23 +25,23 @@ Skip the problem with huge variation in size
         return; \
     }
 
-// Unecessary !
-#define APPEND_SEGMENT_V2                  \
-    if (mta.aggCount > 0) {                           \
-        index = (bit<32>)inactive_q * MAX_SEG + (bit<32>)mta.aggCount - 1;  \
-        data_queues.read(segment_data, index);  \
-        length_queues.read(segment_length, index); \
-        hdr.longPayload.data = (hdr.longPayload.data << 16) | (longData_t)segment_length;   \
-        hdr.longPayload.data = (hdr.longPayload.data << segment_length * 8) | (longData_t)segment_data;   \
-        mta.aggCount = mta.aggCount - 1;   \
-    }   \
-    else {  \
-         \
-        return; \
-    }
+// // Unecessary !
+// #define APPEND_SEGMENT_V2                  \
+//     if (mta.aggCount > 0) {                           \
+//         index = (bit<32>)inactive_q * MAX_SEG + (bit<32>)mta.aggCount - 1;  \
+//         data_queues.read(segment_data, index);  \
+//         length_queues.read(segment_length, index); \
+//         hdr.longPayload.data = (hdr.longPayload.data << 16) | (longData_t)segment_length;   \
+//         hdr.longPayload.data = (hdr.longPayload.data << segment_length * 8) | (longData_t)segment_data;   \
+//         mta.aggCount = mta.aggCount - 1;   \
+//     }   \
+//     else {  \
+//          \
+//         return; \
+//     }
 
 #define APPEND_PAYLOAD \
-    APPEND_SEGMENT_V2 \
+    APPEND_SEGMENT \
     APPEND_SEGMENT \
     APPEND_SEGMENT \
     APPEND_SEGMENT \

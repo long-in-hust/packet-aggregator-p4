@@ -29,7 +29,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
     state parse_l3 {
         // udp.length + ipv4.ihl*4
         mta.segLen = pkt.lookahead<bit<208>>()[15:0] + (bit<16>)pkt.lookahead<bit<8>>()[3:0] * 4;
-        pkt.extract(hdr.payload[0]);
+        pkt.extract(hdr.payload);
         transition accept;
     }
 }
@@ -60,7 +60,7 @@ control sw_ingress(inout headers hdr, inout metadata mta,
                 arp_learning.apply();
             }
             else {
-                if (hdr.ethernet.etherType == EtherType.IPV4 && hdr.payload[0].isValid()) {
+                if (hdr.ethernet.etherType == EtherType.IPV4 && hdr.payload.isValid()) {
                     tbl_aggregation.apply();
                 }
                 if (std_meta.egress_spec != DROP_PORT) {

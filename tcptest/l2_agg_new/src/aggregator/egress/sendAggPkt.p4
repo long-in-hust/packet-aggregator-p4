@@ -12,8 +12,8 @@ action formAggPacket() {
         hdr.aggmeta.segCount = (bit<8>)mta.aggCount; // set segment count in header metadata
         hdr.ethernet.etherType = EtherType.L3AGG; // set EtherType for aggregated packet
     }
-    hdr.longPayload.setValid();
-    hdr.longPayload.data = 0;
+    // hdr.longPayload.setValid();
+    // hdr.longPayload.data = 0;
     
     APPEND_PAYLOAD
 
