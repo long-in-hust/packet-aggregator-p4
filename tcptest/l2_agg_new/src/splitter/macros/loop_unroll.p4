@@ -16,14 +16,14 @@
 #define POP_SEGMENT                     \
     if (mta.aggCount > 0) {                           \
         if (std_meta.instance_type == 0) {     \
-            data_queue.write((bit<32>)current_tail, hdr.payload[0].data);     \
+            data_queue.write((bit<32>)current_tail, hdr.aggSegments[0].data);     \
             current_count = current_count + 1;     \
             count_variable.write(0, current_count);     \
             current_tail = (current_tail + 1) % MAX_SEG_BUF;     \
             head_tail_index.write(1, current_tail);       \
         }     \
-        hdr.payload[0].setInvalid();     \
-        hdr.payload.pop_front(1);   \
+        hdr.aggSegments[0].setInvalid();     \
+        hdr.aggSegments.pop_front(1);   \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \

@@ -38,7 +38,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
     }
 
     state parse_payloads {
-        pkt.extract(hdr.payload.next);
+        pkt.extract(hdr.aggSegments.next);
         mta.segCountRemaining = mta.segCountRemaining - 1;
         transition select(mta.segCountRemaining) {
             0: accept;
@@ -114,7 +114,7 @@ control sw_deparser(packet_out pkt, in headers hdr) {
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.arp);
         pkt.emit(hdr.aggmeta);
-        pkt.emit(hdr.payload[0]);
+        pkt.emit(hdr.recoveredPayload);
     }
 }
 

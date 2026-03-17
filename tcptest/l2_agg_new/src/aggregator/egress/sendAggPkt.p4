@@ -9,8 +9,9 @@ action formAggPacket() {
 
     if (mta.aggCount > 1) {
         hdr.aggmeta.setValid();
-        hdr.aggmeta.segCount = (bit<8>)mta.aggCount; // set segment count in header metadata
-        hdr.ethernet.etherType = EtherType.L3AGG; // set EtherType for aggregated packet
+        hdr.aggmeta.segCount = (bit<8>)mta.aggCount; // set segment count
+        hdr.aggmeta.totalLen = 0; // init
+        hdr.ethernet.etherType = EtherType.L3AGG;
     }
     // hdr.longPayload.setValid();
     // hdr.longPayload.data = 0;

@@ -55,6 +55,12 @@ header eth_payload_t {
 
 header aggmeta_t {
     bit<8> segCount;
+    bit<16> totalLen;
+}
+
+header seg_data_t {
+    bit<16> segLen;
+    data_t data;
 }
 
 /*
@@ -78,7 +84,8 @@ struct headers {
     ethernet_t   ethernet;
     arp_t        arp;
     aggmeta_t    aggmeta;
-    eth_payload_t[MAX_SEG - 1] payload;
+    seg_data_t[MAX_SEG - 1] aggSegments;
+    eth_payload_t recoveredPayload;
 }
 
 struct metadata {

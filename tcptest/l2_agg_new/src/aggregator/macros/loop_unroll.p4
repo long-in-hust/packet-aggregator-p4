@@ -18,6 +18,7 @@ Skip the problem with huge variation in size
         hdr.aggSegments[0].setValid();    \
         hdr.aggSegments[0].data = segment_data;   \
         hdr.aggSegments[0].segLen = segment_length;   \
+        hdr.aggmeta.totalLen = hdr.aggmeta.totalLen + segment_length;   \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \
