@@ -11,11 +11,6 @@ Skip the problem with huge variation in size
 
 #define APPEND_SEGMENT                     \
     if (mta.aggCount > 0) {     \
-        if (mta.totalPayloadLen >= MAX_P4_HEADER_SIZE - 54) {    \
-            mta.resubmitted = true;    \
-            recirculate_preserving_field_list(1);    \
-            return; \
-        }   \
         index = (bit<32>)inactive_q * MAX_SEG + (bit<32>)mta.aggCount - 1;  \
         data_queues.read(segment_data, index);  \
         length_queues.read(segment_length, index);  \

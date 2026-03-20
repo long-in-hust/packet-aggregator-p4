@@ -7,7 +7,7 @@ const int MAX_BATCH_SIZE_BYTES = 512; // maximum batch size to trigger aggregati
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<320> data_t; // payload data type
+typedef bit<272> data_t; // payload data type
 // typedef bit<4096> longData_t; // type for the aggregated payload in the egress pipeline
 
 /*
@@ -49,7 +49,7 @@ header arp_t {
 header eth_payload_t {
     // bit<160> ipv4;
     // bit<64> udp;
-    // bit<88> udp_payload;
+    // bit<48> udp_payload;
     data_t data;
 }
 
