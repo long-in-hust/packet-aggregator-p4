@@ -10,7 +10,12 @@ Skip the problem with huge variation in size
 */
 
 #define APPEND_SEGMENT                     \
-    if (mta.aggCount > 0) {                           \
+    if (mta.aggCount > 0) {     \
+        if (mta.totalPayloadLen >= MAX_P4_HEADER_SIZE - 54) {    \
+            mta.resubmitted = true;    \
+            recirculate_preserving_field_list(1);    \
+            return; \
+        }   \
         index = (bit<32>)inactive_q * MAX_SEG + (bit<32>)mta.aggCount - 1;  \
         data_queues.read(segment_data, index);  \
         length_queues.read(segment_length, index);  \
@@ -18,12 +23,9 @@ Skip the problem with huge variation in size
         hdr.aggSegments[0].setValid();    \
         hdr.aggSegments[0].data = segment_data;   \
         hdr.aggSegments[0].segLen = segment_length;   \
-        hdr.aggmeta.totalLen = hdr.aggmeta.totalLen + segment_length;   \
+        hdr.aggmeta.totalLen = hdr.aggmeta.totalLen + segment_length + 2;   \
+        mta.totalPayloadLen = mta.totalPayloadLen + segment_length + 2;     \
         mta.aggCount = mta.aggCount - 1;   \
-    }   \
-    else {  \
-         \
-        return; \
     }
 
 // // Unecessary !
@@ -42,20 +44,6 @@ Skip the problem with huge variation in size
 //     }
 
 #define APPEND_PAYLOAD \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
     APPEND_SEGMENT \
     APPEND_SEGMENT \
     APPEND_SEGMENT \

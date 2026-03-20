@@ -8,7 +8,7 @@ typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
 typedef bit<320> data_t; // payload data type
-typedef bit<4096> longData_t; // type for the aggregated payload in the egress pipeline
+// typedef bit<4096> longData_t; // type for the aggregated payload in the egress pipeline
 
 /*
 ------ Registers ------
@@ -95,8 +95,14 @@ struct headers {
 }
 
 struct metadata {
-    bit<6> aggCount;
-    bit<1> toggleSendAgg;
     bool dstMacChanged;
     bit<16> segLen; // length of the current segment
+    bit<16> totalPayloadLen;
+    
+    @field_list(1)
+    bool resubmitted;
+    @field_list(1)
+    bit<6> aggCount;
+    @field_list(1)
+    bit<1> toggleSendAgg;
 }

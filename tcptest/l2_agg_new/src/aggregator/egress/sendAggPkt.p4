@@ -8,9 +8,12 @@ action formAggPacket() {
     inactive_q = inactive_q ^ 1; // get inactive queue
 
     if (mta.aggCount > 1) {
-        hdr.aggmeta.setValid();
-        hdr.aggmeta.segCount = (bit<8>)mta.aggCount; // set segment count
-        hdr.aggmeta.totalLen = 0; // init
+        if (!mta.resubmitted) {
+            hdr.aggmeta.setValid();
+            hdr.aggmeta.segCount = (bit<8>)mta.aggCount; // set segment count
+            hdr.aggmeta.totalLen = 0; // init total length
+        }
+        mta.totalPayloadLen = 0;
         hdr.ethernet.etherType = EtherType.L3AGG;
     }
     // hdr.longPayload.setValid();

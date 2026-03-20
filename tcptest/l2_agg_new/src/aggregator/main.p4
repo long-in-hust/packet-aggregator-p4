@@ -3,6 +3,7 @@
 
 #define CPU_PORT 510
 #define DROP_PORT 511
+#define MAX_P4_HEADER_SIZE 512
 
 #include "dataStructs.p4"
 #include "macros/loop_unroll.p4"
@@ -17,12 +18,18 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         transition select(hdr.ethernet.etherType) {
             EtherType.ARP:  parse_arp;
             EtherType.IPV4: parse_l3;
+            EtherType.L3AGG: parse_aggmeta;
             default:        accept;
         }
     }
 
     state parse_arp {
         pkt.extract(hdr.arp);
+        transition accept;
+    }
+
+    state parse_aggmeta {
+        pkt.extract(hdr.aggmeta);
         transition accept;
     }
 
