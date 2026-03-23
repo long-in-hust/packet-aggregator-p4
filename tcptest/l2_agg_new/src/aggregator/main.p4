@@ -16,7 +16,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             EtherType.ARP:  parse_arp;
-            EtherType.IPV4: parse_l3;
+            EtherType.IPV4: pre_parse_l3;
             default:        accept;
         }
     }
@@ -26,9 +26,40 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         transition accept;
     }
 
+    state pre_parse_l3 {
+        mta.segLen = pkt.lookahead<bit<32>>()[15:0];
+        mta.leftShiftAmount = 40 - (mta.segLen);
+        transition select(mta.segLen) {
+            0: accept;
+            default: parse_l3;
+        }
+    }
+
     state parse_l3 {
-        pkt.extract(hdr.payload[0]);
-        transition accept;
+        pkt.extract(hdr.original_payload.next);
+        mta.payload_data = mta.payload_data << 8;
+        mta.payload_data = mta.payload_data | (data_t)hdr.original_payload.last.chunk;
+        mta.segLen = mta.segLen - 1;
+        transition select(mta.segLen) {
+            0: pre_shift_left;
+            default: parse_l3;
+        }
+    }
+
+    state pre_shift_left {
+        transition select(mta.leftShiftAmount) {
+            0: accept;
+            default: shift_left;
+        }
+    }
+
+    state shift_left {
+        mta.payload_data = mta.payload_data << 8;
+        mta.leftShiftAmount = mta.leftShiftAmount - 1;
+        transition select(mta.leftShiftAmount) {
+            0: accept;
+            default: shift_left;
+        }
     }
 }
 
@@ -58,7 +89,8 @@ control sw_ingress(inout headers hdr, inout metadata mta,
                 arp_learning.apply();
             }
             else {
-                if (hdr.ethernet.etherType == EtherType.IPV4 && hdr.payload[0].isValid()) {
+                if (hdr.ethernet.etherType == EtherType.IPV4) {
+                    hdr.original_payload.pop_front(40);
                     tbl_aggregation.apply();
                 }
                 if (std_meta.egress_spec != DROP_PORT) {
@@ -119,7 +151,7 @@ control sw_deparser(packet_out pkt, in headers hdr) {
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.arp);
         pkt.emit(hdr.aggmeta);
-        pkt.emit(hdr.payload);
+        pkt.emit(hdr.parsed_payload);
     }
 }
 

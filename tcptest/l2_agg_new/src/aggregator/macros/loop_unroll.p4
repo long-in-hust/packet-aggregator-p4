@@ -9,9 +9,10 @@
     if (mta.aggCount > 0) {                           \
         index = (bit<32>)inactive_q * LOG_QUEUE_MAX_ALLOC_ELEMENTS + (bit<32>)mta.aggCount - 1;  \
         data_queues.read(segment_data, index);  \
-        hdr.payload.push_front(1);   \
-        hdr.payload[0].setValid();    \
-        hdr.payload[0].data = segment_data;   \
+        hdr.parsed_payload.push_front(1);   \
+        hdr.original_payload.pop_front(40);  \
+        hdr.parsed_payload[0].setValid();    \
+        hdr.parsed_payload[0].data = segment_data;   \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \

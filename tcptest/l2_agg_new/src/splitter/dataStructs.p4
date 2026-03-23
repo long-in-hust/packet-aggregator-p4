@@ -12,7 +12,7 @@ const int LOG_QUEUE_MAX_ALLOC_ELEMENTS   = 256; // maximum segments per aggregat
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<312> data_t;
+typedef bit<320> data_t;
 
 /*
 ------ Registers ------

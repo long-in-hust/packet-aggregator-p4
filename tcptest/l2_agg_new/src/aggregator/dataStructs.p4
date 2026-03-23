@@ -19,6 +19,7 @@ register<macAddr_t>(1) last_dst_addr;
 register<bit<1>>(1) active_queue; // 0 or 1 to indicate which queue is currently active for aggregation
 
 register<data_t>(LOG_QUEUE_MAX_ALLOC_ELEMENTS * 2) data_queues; // queue to store incoming segments for aggregation
+// divided into two halves for two aggregation batches
 
 /* 
 ------- Define headers --------
@@ -48,6 +49,10 @@ header bytechunk_payload_t {
     bit<8> chunk;
 }
 
+header full_payload_t {
+    data_t data;
+}
+
 header aggmeta_t {
     bit<8> segCount;
 }
@@ -74,6 +79,7 @@ struct headers {
     arp_t        arp;
     aggmeta_t    aggmeta;
     bytechunk_payload_t[40] original_payload;
+    full_payload_t[LOG_QUEUE_MAX_ALLOC_ELEMENTS] parsed_payload;
 }
 
 struct metadata {
@@ -81,4 +87,6 @@ struct metadata {
     bit<1> toggleSendAgg;
     bool dstMacChanged;
     bit<16> segLen;
+    bit<16> leftShiftAmount;
+    data_t payload_data;
 }

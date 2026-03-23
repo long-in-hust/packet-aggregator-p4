@@ -9,11 +9,10 @@ action reset_batch(bit<1> param_actv_q) {
 action aggregateSaveBuffer(bit<1> param_actv_q, bit<6> param_current_count) {
     // write data
     bit<32> write_index = (bit<32>)param_actv_q * LOG_QUEUE_MAX_ALLOC_ELEMENTS + (bit<32>)param_current_count;
-    data_queues.write(write_index, hdr.payload[0].data);
+    data_queues.write(write_index, mta.payload_data);
 
     bit<6> count = param_current_count + 1;
     current_batch_count.write((bit<32>)param_actv_q, (bit<6>)count);
-    hdr.payload[0].setInvalid();
 }
 
 action aggregating() {
@@ -29,7 +28,8 @@ action aggregating() {
     last_dst_addr.read(last_dest_mac, 0);
     
     if (hdr.ethernet.dstAddr != last_dest_mac
-        || (bit<32>)count * 39 >= MAX_BATCH_SIZE_BYTES || count == LOG_QUEUE_MAX_ALLOC_ELEMENTS - 1) 
+        || (bit<32>)count * 39 >= MAX_BATCH_SIZE_BYTES - std_meta.packet_length
+        || count == LOG_QUEUE_MAX_ALLOC_ELEMENTS - 1) 
     {
         last_dst_addr.write(0, hdr.ethernet.dstAddr);
         hdr.ethernet.dstAddr = last_dest_mac; // Yeah, this is basically a swap.
@@ -49,13 +49,18 @@ action aggregating() {
     }
 }
 
+action append_normal_payload() {
+    hdr.parsed_payload[0].setValid();
+    hdr.parsed_payload[0].data = mta.payload_data;
+}
+
 table tbl_aggregation {
     key = {
         hdr.ethernet.dstAddr: exact;
     }
     actions = {
         aggregating;
-        NoAction;
+        append_normal_payload;
     }
-    default_action = NoAction();
+    default_action = append_normal_payload();
 }
