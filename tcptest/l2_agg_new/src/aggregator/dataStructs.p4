@@ -87,6 +87,5 @@ struct metadata {
     bit<1> toggleSendAgg;
     bool dstMacChanged;
     bit<16> segLen;
-    bit<16> leftShiftAmount;
     data_t payload_data;
 }

@@ -12,6 +12,8 @@
 */
 parser pkt_parser(packet_in pkt, out headers hdr,
                       inout metadata mta, inout standard_metadata_t std_meta) {
+    bit<16> tmpLength;
+    bit<16> leftShiftAmount;
     state start {
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
@@ -28,8 +30,9 @@ parser pkt_parser(packet_in pkt, out headers hdr,
 
     state pre_parse_l3 {
         mta.segLen = pkt.lookahead<bit<32>>()[15:0];
-        mta.leftShiftAmount = 40 - (mta.segLen);
-        transition select(mta.segLen) {
+        tmpLength = mta.segLen;
+        leftShiftAmount = 40 - (mta.segLen);
+        transition select(tmpLength) {
             0: accept;
             default: parse_l3;
         }
@@ -39,15 +42,15 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         pkt.extract(hdr.original_payload.next);
         mta.payload_data = mta.payload_data << 8;
         mta.payload_data = mta.payload_data | (data_t)hdr.original_payload.last.chunk;
-        mta.segLen = mta.segLen - 1;
-        transition select(mta.segLen) {
+        tmpLength = tmpLength - 1;
+        transition select(tmpLength) {
             0: pre_shift_left;
             default: parse_l3;
         }
     }
 
     state pre_shift_left {
-        transition select(mta.leftShiftAmount) {
+        transition select(leftShiftAmount) {
             0: accept;
             default: shift_left;
         }
@@ -55,8 +58,8 @@ parser pkt_parser(packet_in pkt, out headers hdr,
 
     state shift_left {
         mta.payload_data = mta.payload_data << 8;
-        mta.leftShiftAmount = mta.leftShiftAmount - 1;
-        transition select(mta.leftShiftAmount) {
+        leftShiftAmount = leftShiftAmount - 1;
+        transition select(leftShiftAmount) {
             0: accept;
             default: shift_left;
         }
