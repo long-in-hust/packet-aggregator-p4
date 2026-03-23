@@ -1,5 +1,4 @@
 action reset_batch(bit<1> param_actv_q) {
-    consecutive_match.write(0, 0);
     active_queue.write(0, param_actv_q ^ 1);
 
     current_batch_count.read(mta.aggCount, (bit<32>)param_actv_q); // get the count of segments in the batch to be sent (now inactive)
@@ -9,7 +8,7 @@ action reset_batch(bit<1> param_actv_q) {
 
 action aggregateSaveBuffer(bit<1> param_actv_q, bit<6> param_current_count) {
     // write data
-    bit<32> write_index = (bit<32>)param_actv_q * MAX_SEG + (bit<32>)param_current_count;
+    bit<32> write_index = (bit<32>)param_actv_q * LOG_QUEUE_MAX_ALLOC_ELEMENTS + (bit<32>)param_current_count;
     data_queues.write(write_index, hdr.payload[0].data);
 
     bit<6> count = param_current_count + 1;
@@ -30,9 +29,8 @@ action aggregating() {
     last_dst_addr.read(last_dest_mac, 0);
     
     if (hdr.ethernet.dstAddr != last_dest_mac
-        || (bit<32>)count * 39 >= MAX_BATCH_SIZE_BYTES || count == MAX_SEG - 1) 
+        || (bit<32>)count * 39 >= MAX_BATCH_SIZE_BYTES || count == LOG_QUEUE_MAX_ALLOC_ELEMENTS - 1) 
     {
-        consecutive_match.write(0, 0);
         last_dst_addr.write(0, hdr.ethernet.dstAddr);
         hdr.ethernet.dstAddr = last_dest_mac; // Yeah, this is basically a swap.
         // Why swapping ?
@@ -42,7 +40,6 @@ action aggregating() {
         reset_batch(active_q);
         aggregateSaveBuffer(active_q ^ 1, 0);
     } else {
-        consecutive_match.write(0, 1);
         aggregateSaveBuffer(active_q, count);
         drop(); // Why drop if the dst_mac is the same as the last ?
             // Because the header is being unused

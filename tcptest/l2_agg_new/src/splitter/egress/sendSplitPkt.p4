@@ -26,7 +26,7 @@ action formSegPacket() {
         data_queue.read(hdr.payload[0].data, (bit<32>)current_head);
 
         // update head index
-        current_head = (current_head + 1) % MAX_SEG_BUF;
+        current_head = (current_head + 1) % LOG_QUEUE_MAX_ALLOC_ELEMENTS_BUF;
         head_tail_index.write(0, current_head);
         
         clone(CloneType.E2E, 1);

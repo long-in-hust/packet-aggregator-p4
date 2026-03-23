@@ -1,9 +1,9 @@
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 
-const bit<10> MAX_SEG_BUF   = 256; // maximum aggregation segments in buffer
+const bit<10> LOG_QUEUE_MAX_ALLOC_ELEMENTS_BUF   = 256; // maximum aggregation segments in buffer
 // const int MAX_FLOWS   = 3; // maximum aggregation flows
-const int MAX_SEG   = 256; // maximum segments per aggregation flow
+const int LOG_QUEUE_MAX_ALLOC_ELEMENTS   = 256; // maximum segments per aggregation flow
 // const int MAX_AGG_SIZE_BYTE = 1024; // maximum aggregation size in bytes
 
 /* 
@@ -18,7 +18,7 @@ typedef bit<312> data_t;
 ------ Registers ------
 */
 
-register<data_t>((bit<32>)MAX_SEG_BUF)    data_queue;
+register<data_t>((bit<32>)LOG_QUEUE_MAX_ALLOC_ELEMENTS_BUF)    data_queue;
 register<bit<10>>(1)               count_variable;
 register<bit<10>>(2)               head_tail_index;
 
@@ -78,7 +78,7 @@ struct headers {
     ethernet_t   ethernet;
     arp_t        arp;
     aggmeta_t    aggmeta;
-    eth_payload_t[MAX_SEG - 1] payload;
+    eth_payload_t[LOG_QUEUE_MAX_ALLOC_ELEMENTS - 1] payload;
 }
 
 struct metadata {

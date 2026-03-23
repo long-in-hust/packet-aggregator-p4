@@ -1,4 +1,4 @@
-const int MAX_SEG = 32; // maximum number of segments to aggregate (including the first one)
+const int LOG_QUEUE_MAX_ALLOC_ELEMENTS = 32;
 const int MAX_BATCH_SIZE_BYTES = 512; // maximum batch size to trigger aggregation
 
 /* 
@@ -16,10 +16,9 @@ typedef bit<312> data_t; // payload data type
 register<bit<6>>(2) current_batch_count;      
 register<macAddr_t>(1) last_dst_addr;
 
-register<bit<1>>(1) consecutive_match;
 register<bit<1>>(1) active_queue; // 0 or 1 to indicate which queue is currently active for aggregation
 
-register<data_t>(MAX_SEG * 2) data_queues; // queue to store incoming segments for aggregation
+register<data_t>(LOG_QUEUE_MAX_ALLOC_ELEMENTS * 2) data_queues; // queue to store incoming segments for aggregation
 
 /* 
 ------- Define headers --------
@@ -45,7 +44,7 @@ header arp_t {
 header eth_payload_t {
     // bit<160> ipv4;
     // bit<64> udp;
-    // bit<88> udp_payload;
+    // bit<48> udp_payload;
     data_t data;
 }
 
@@ -74,7 +73,7 @@ struct headers {
     ethernet_t   ethernet;
     arp_t        arp;
     aggmeta_t    aggmeta;
-    eth_payload_t[MAX_SEG - 1] payload;
+    eth_payload_t[LOG_QUEUE_MAX_ALLOC_ELEMENTS - 1] payload;
 }
 
 struct metadata {

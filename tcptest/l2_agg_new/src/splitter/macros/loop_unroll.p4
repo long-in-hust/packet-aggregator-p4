@@ -1,5 +1,5 @@
 /*
-    Why did I unroll the loop and write POP_SEGMENT almost 30 times instead of just doing a for loop from 0 to MAX_SEG-1 and calling APPEND_PAYLOAD(i) in the loop body ?
+    Why did I unroll the loop and write POP_SEGMENT almost 30 times instead of just doing a for loop from 0 to LOG_QUEUE_MAX_ALLOC_ELEMENTS-1 and calling APPEND_PAYLOAD(i) in the loop body ?
     Well, P4 never allow loops ! The APPEND_PAYLOAD macro is to make it look shorter, else it would look 8 times longer than what you see.
 
     Also, the else part with return is to avoid unnecessary iterations once all segments have been appended. Since we are decrementing mta.aggCount with each appended segment, once it reaches 0, we can stop appending and just set the EtherType and return the packet.
@@ -19,7 +19,7 @@
             data_queue.write((bit<32>)current_tail, hdr.payload[0].data);     \
             current_count = current_count + 1;     \
             count_variable.write(0, current_count);     \
-            current_tail = (current_tail + 1) % MAX_SEG_BUF;     \
+            current_tail = (current_tail + 1) % LOG_QUEUE_MAX_ALLOC_ELEMENTS_BUF;     \
             head_tail_index.write(1, current_tail);       \
         }     \
         hdr.payload[0].setInvalid();     \
