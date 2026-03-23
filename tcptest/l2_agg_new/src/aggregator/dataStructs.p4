@@ -7,7 +7,7 @@ const int MAX_BATCH_SIZE_BYTES = 512; // maximum batch size to trigger aggregati
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<312> data_t; // payload data type
+typedef bit<320> data_t; // payload data type
 
 /*
 ------ Registers ------
@@ -44,7 +44,7 @@ header arp_t {
 header eth_payload_t {
     // bit<160> ipv4;
     // bit<64> udp;
-    // bit<48> udp_payload;
+    // bit<96> udp_payload;
     data_t data;
 }
 
@@ -80,4 +80,5 @@ struct metadata {
     bit<6> aggCount;
     bit<1> toggleSendAgg;
     bool dstMacChanged;
+    bit<16> segLen;
 }
