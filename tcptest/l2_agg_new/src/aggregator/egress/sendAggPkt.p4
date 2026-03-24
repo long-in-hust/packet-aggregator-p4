@@ -3,7 +3,7 @@ action formAggPacket() {
     bit<32> index;
     data_t segment_data;
 
-    active_queue.read(inactive_q, 0); // get active queue
+    active_batch.read(inactive_q, 0); // get active queue
     inactive_q = inactive_q ^ 1; // get inactive queue
 
     if (mta.aggCount > 1) {

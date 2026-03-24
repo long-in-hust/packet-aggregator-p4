@@ -1,5 +1,5 @@
 action reset_batch(bit<1> param_actv_q) {
-    active_queue.write(0, param_actv_q ^ 1);
+    active_batch.write(0, param_actv_q ^ 1);
 
     current_batch_count.read(mta.aggCount, (bit<32>)param_actv_q); // get the count of segments in the batch to be sent (now inactive)
     current_batch_count.write((bit<32>)param_actv_q, 0); // reset batch count
@@ -8,7 +8,7 @@ action reset_batch(bit<1> param_actv_q) {
 
 action aggregateSaveBuffer(bit<1> param_actv_q, bit<6> param_current_count) {
     // write data
-    bit<32> write_index = (bit<32>)param_actv_q * LOG_QUEUE_MAX_ALLOC_ELEMENTS + (bit<32>)param_current_count;
+    bit<32> write_index = (bit<32>)param_actv_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)param_current_count;
     data_queues.write(write_index, mta.payload_data);
 
     bit<6> count = param_current_count + 1;
@@ -18,7 +18,7 @@ action aggregateSaveBuffer(bit<1> param_actv_q, bit<6> param_current_count) {
 action aggregating() {
     // get active queue
     bit<1> active_q;
-    active_queue.read(active_q, 0);
+    active_batch.read(active_q, 0);
     
     bit<6> count;
     current_batch_count.read(count, (bit<32>)active_q);
@@ -28,8 +28,7 @@ action aggregating() {
     last_dst_addr.read(last_dest_mac, 0);
     
     if (hdr.ethernet.dstAddr != last_dest_mac
-        || (bit<32>)count * 39 >= MAX_BATCH_SIZE_BYTES - std_meta.packet_length
-        || count == LOG_QUEUE_MAX_ALLOC_ELEMENTS - 1) 
+        || count == MAX_SEGMENTS_PER_BATCH)
     {
         last_dst_addr.write(0, hdr.ethernet.dstAddr);
         hdr.ethernet.dstAddr = last_dest_mac; // Yeah, this is basically a swap.

@@ -114,7 +114,7 @@ control sw_deparser(packet_out pkt, in headers hdr) {
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.arp);
         pkt.emit(hdr.aggmeta);
-        pkt.emit(hdr.payload[0]);
+        pkt.emit(hdr.bytechunk_payload);
     }
 }
 

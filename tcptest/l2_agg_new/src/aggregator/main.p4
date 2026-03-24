@@ -12,8 +12,12 @@
 */
 parser pkt_parser(packet_in pkt, out headers hdr,
                       inout metadata mta, inout standard_metadata_t std_meta) {
+    
+    // Các biến tạm để lưu trữ độ dài còn lại cần parse (tmpLength)
+    // và số lần cần dịch trái dữ liệu (leftShiftAmount) để đưa dữ liệu lên đầu (bên trái) của biến mta.payload_data.
     bit<16> tmpLength;
     bit<16> leftShiftAmount;
+
     state start {
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
@@ -29,20 +33,48 @@ parser pkt_parser(packet_in pkt, out headers hdr,
     }
 
     state pre_parse_l3 {
+        // Lookahead<bit<n>>(): xem trước n bit dữ liệu tiếp theo trong phần dữ liêu chưa extract của gói
+        // mà không dịch con trỏ đầu gói ra sau hay lấy dữ liệu đó vào đơn vị cấu trúc header.
+        // Ở đây 32 bit đầu tiên cũng là 32 bit đầu của header IPv4,
+        // [15:0] để lấy các bit từ 15 đến 0 (tính từ bên phải) của 32 bit được lookahead,
+        // tương ứng với các bit từ 16 đến 31 tính từ đầu header IPv4, tương ứng với trường Total Length của header IPv4.
         mta.segLen = pkt.lookahead<bit<32>>()[15:0];
+        // Lưu độ dài còn lại cần parse vào biến tạm tmpLength để dùng trong state parse_l3.
+        // mta.segLen không thay đổi vì giá trị này sẽ được sử dụng ở giai đoạn sau
         tmpLength = mta.segLen;
+        // leftShiftAmount được tính để biết cần dịch trái bao nhiêu lần để đưa dữ liệu lên đầu của mta.payload_data
+        // sau khi parse xong phần dữ liệu cần thiết.
+        // Giá trị này tính theo đơn vị byte
         leftShiftAmount = 40 - (mta.segLen);
+        // Nếu độ dài cần parse là 0, nghĩa là gói tin không có payload nào sau header Ethernet để parse hay dịch trái
+        // -> Từ chối gói tin này luôn vì nó không có payload nào sau header Ethernet và không có giá trị sử dụng thực tế.
         transition select(tmpLength) {
-            0: accept;
+            0: reject;
             default: parse_l3;
         }
     }
 
     state parse_l3 {
+        // Việc kết hợp con trỏ hdr.original_payload.next với phần
+        // transition select điều hướng về lại chính state này cho phép
+        // tạo luồng hoạt động như vòng lặp mà không cần xác định cụ thể số lần trong code trước khi compile
+
+        // Các phần tử chưa được parse trong header stack này sẽ có giá trị trả về của phương thức .isValid() là false
+        // và được xem như không tồn tại.
         pkt.extract(hdr.original_payload.next);
+        
+        // Dịch trái 8 bit (1 byte) dữ liệu trong metadata để chuẩn bị dùng phép or để ghép với byte tiếp theo
         mta.payload_data = mta.payload_data << 8;
+
+        // Phần dữ liệu được parse từ các phần tử của hdr.original_payload vào mta.payload_data đang ở bên phải của khối dữ liệu
         mta.payload_data = mta.payload_data | (data_t)hdr.original_payload.last.chunk;
+
+        // Độ dài còn lại cần parse giảm đi 1 byte.
         tmpLength = tmpLength - 1;
+
+        // Sau khi extract, nếu độ dài còn lại bằng 0, nghĩa là đã parse xong phần dữ liệu cần thiết,
+        // sẽ chuyển sang state pre_shift_left để kiểm tra xem có cần dịch trái thêm nữa hay không.
+        // Ngược lại, tiếp tục quay lại parse đến khi độ dài về bằng 0.
         transition select(tmpLength) {
             0: pre_shift_left;
             default: parse_l3;
@@ -50,6 +82,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
     }
 
     state pre_shift_left {
+        // Kiểm tra số byte cần dịch trái (do dữ liệu được ghi vào bên phải, trong khi cần dữ liệu ở bên trái, ngay sau header)
         transition select(leftShiftAmount) {
             0: accept;
             default: shift_left;
@@ -57,8 +90,14 @@ parser pkt_parser(packet_in pkt, out headers hdr,
     }
 
     state shift_left {
+        // dịch trái 8 bit (1 byte)
         mta.payload_data = mta.payload_data << 8;
+        // sau mỗi lần dịch trái, số byte cần dịch giảm đi 1
         leftShiftAmount = leftShiftAmount - 1;
+        // Nếu số byte cần dịch về 0, nghĩa là đã dịch xong,
+        // sẽ chuyển sang state accept để chấp nhận gói tin đi qua
+        // control tiếp theo của pipeline và kết thúc quá trình parse.
+        // Ngược lại tiếp tục quay lại state này và dịch trái tiếp.
         transition select(leftShiftAmount) {
             0: accept;
             default: shift_left;
@@ -68,23 +107,33 @@ parser pkt_parser(packet_in pkt, out headers hdr,
 
 control checksum_verifier(inout headers hdr, inout metadata mta) {
     apply {
-        // Will leave it empty for now
+        // Phần này để trống do chưa xét đến việc kiểm tra checksum.
     }
 }
 
 control sw_ingress(inout headers hdr, inout metadata mta,
                 inout standard_metadata_t std_meta) {
-    // default drop action
+    
+    // Hành động drop được định nghĩa vì ngắn gọn và sử dụng nhiều hơn 1 lần.
+    // Hành động drop được định nghĩa như một thủ tục, và sẽ chỉ chạy khi được gọi đến
+    // trong khối apply của control.
     action drop() {
+        // Đánh dấu egress_spec bằng DROP_PORT,
+        // gói tin sẽ được chuyển tới cổng này
+        // trước khi vào control tiếp theo và bị bỏ đi.
         mark_to_drop(std_meta);
     }
     
+    // Sử dụng include file p4 khác vì mã nguồn dài và cần được chia nhỏ để dễ đọc và tác động hơn.
     #include "ingress/L2Actions.p4"
 
     #include "ingress/aggBuffer.p4"
 
     apply {
         if (hdr.ethernet.isValid()) {
+            // Nếu gói tin là ARP request, thực hiện chức năng ARP cơ bản để lấy địa chỉ MAC đích khi được yêu cầu.
+            // Tuy không phải vấn đề chính trong đồ án, chức năng này quan trọng vì thiết bị gửi cần biết
+            // địa chỉ MAC đích để gửi gói tin đi.
             if (hdr.ethernet.etherType == EtherType.ARP && 
                 hdr.arp.isValid() && 
                 hdr.arp.op_code == ArpOpCode.REQUEST) 

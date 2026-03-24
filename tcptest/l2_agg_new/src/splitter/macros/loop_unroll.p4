@@ -5,14 +5,6 @@
     Also, the else part with return is to avoid unnecessary iterations once all segments have been appended. Since we are decrementing mta.aggCount with each appended segment, once it reaches 0, we can stop appending and just set the EtherType and return the packet.
 */
 
-/**
-        if (current_count > 0) {    \
-            mta.resubmitted = true;     \
-            resubmit_preserving_field_list(1);     \
-            clone(CloneType.I2E, 1);     \
-        }     \
-**/
-
 #define POP_SEGMENT                     \
     if (mta.aggCount > 0) {                           \
         if (std_meta.instance_type == 0) {     \
@@ -60,3 +52,51 @@
     POP_SEGMENT \
     POP_SEGMENT \
     POP_SEGMENT
+
+#define PUSH_SINGLE_BYTE \
+    hdr.bytechunk_payload.push_front(1); \
+    hdr.bytechunk_payload[0].setValid(); \
+    hdr.bytechunk_payload[0].chunk = segment_data[7:0]; \
+    segment_data = segment_data >> 8;
+
+#define PUSH_BYTES \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE \
+    PUSH_SINGLE_BYTE
