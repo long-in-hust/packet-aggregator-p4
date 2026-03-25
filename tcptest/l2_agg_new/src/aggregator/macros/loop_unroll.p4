@@ -10,13 +10,11 @@
         index = (bit<32>)inactive_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)mta.aggCount - 1;  \
         data_queues.read(segment_data, index);  \
         hdr.parsed_payload.push_front(1);   \
-        hdr.original_payload.pop_front(40);  \
         hdr.parsed_payload[0].setValid();    \
         hdr.parsed_payload[0].data = segment_data;   \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \
-         \
         return; \
     }
 

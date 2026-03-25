@@ -47,9 +47,11 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         // Giá trị này tính theo đơn vị byte
         leftShiftAmount = 40 - (mta.segLen);
         // Nếu độ dài cần parse là 0, nghĩa là gói tin không có payload nào sau header Ethernet để parse hay dịch trái
-        // -> Từ chối gói tin này luôn vì nó không có payload nào sau header Ethernet và không có giá trị sử dụng thực tế.
         transition select(tmpLength) {
-            0: reject;
+            0: accept; // Đúng ra phải là reject (từ chối) vì gói tin này không có payload nào sau header Ethernet,
+            // không có giá trị thực tế
+            // Tuy nhiên v1model không hỗ trợ khai báo tường minh việc chuyển sang state reject
+            // ([--Wwarn=unsupported] warning: Explicit transition to reject not supported on this target)
             default: parse_l3;
         }
     }
@@ -63,10 +65,12 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         // và được xem như không tồn tại.
         pkt.extract(hdr.original_payload.next);
         
-        // Dịch trái 8 bit (1 byte) dữ liệu trong metadata để chuẩn bị dùng phép or để ghép với byte tiếp theo
+        // Dịch trái 8 bit (1 byte) dữ liệu trong mta.payload_data
+        // Sau khi dịch, 8 bit cuối sẽ toàn 0 để chuẩn bị dùng phép or để nối với byte tiếp theo
         mta.payload_data = mta.payload_data << 8;
 
-        // Phần dữ liệu được parse từ các phần tử của hdr.original_payload vào mta.payload_data đang ở bên phải của khối dữ liệu
+        // Làm phép or - Khi cast dạng bit<8> sang dạng data_t, toàn bộ các bit bên trái sẽ được điền bằng 0
+        // Phép or này sẽ lấp 8 bit cuối của mta.payload_data bằng byte vừa được parse vào hdr.original_payload.next.chunk
         mta.payload_data = mta.payload_data | (data_t)hdr.original_payload.last.chunk;
 
         // Độ dài còn lại cần parse giảm đi 1 byte.
@@ -114,9 +118,8 @@ control checksum_verifier(inout headers hdr, inout metadata mta) {
 control sw_ingress(inout headers hdr, inout metadata mta,
                 inout standard_metadata_t std_meta) {
     
-    // Hành động drop được định nghĩa vì ngắn gọn và sử dụng nhiều hơn 1 lần.
-    // Hành động drop được định nghĩa như một thủ tục, và sẽ chỉ chạy khi được gọi đến
-    // trong khối apply của control.
+    // Hành động drop được định nghĩa vì gọi drop() ngắn gọn hơn viết đầy đủ mark_to_drop(std_meta) mỗi lần cần drop gói tin.
+    // Hiện tại ở Ingress việc định nghĩa này không thực sự cần thiết hoặc bắt buộc.
     action drop() {
         // Đánh dấu egress_spec bằng DROP_PORT,
         // gói tin sẽ được chuyển tới cổng này
@@ -142,7 +145,6 @@ control sw_ingress(inout headers hdr, inout metadata mta,
             }
             else {
                 if (hdr.ethernet.etherType == EtherType.IPV4) {
-                    hdr.original_payload.pop_front(40);
                     tbl_aggregation.apply();
                 }
                 if (std_meta.egress_spec != DROP_PORT) {
@@ -204,6 +206,7 @@ control sw_deparser(packet_out pkt, in headers hdr) {
         pkt.emit(hdr.arp);
         pkt.emit(hdr.aggmeta);
         pkt.emit(hdr.parsed_payload);
+        pkt.emit(hdr.original_payload);
     }
 }
 

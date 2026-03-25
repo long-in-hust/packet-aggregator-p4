@@ -41,10 +41,11 @@ batch còn lại sẽ được sử dụng để lưu dữ liệu của các gó
 */
 
 // số lượng segment đã được lưu trong mỗi batch (hiện tại tối đa là 13)
-// Register này có 2 phần tử, mỗi phần tử có độ dài 6 bit (chứa 64 giá trị, dư thừa so với 13, sẽ cân nhắc điều chỉnh sau)
+// Register này có 2 phần tử (tương ứng 2 batch),
+// mỗi phần tử có độ dài 6 bit (chứa 64 giá trị, dư thừa so với 13, sẽ cân nhắc điều chỉnh sau)
 register<bit<6>>(2) current_batch_count;      
 
-// Lưu chỉ số batch đang được sử dụng. Do chỉ có 2 batch nên 1 bit là đủ.
+// Lưu chỉ số của batch đang được sử dụng. Do chỉ có 2 batch nên 1 bit (2 giá trị) là đủ.
 register<bit<1>>(1) active_batch;
 
 // Register được dùng chung để lưu dữ liệu payload của các segment cho cả 2 batch. Số phần tử của register bằng:
@@ -52,8 +53,12 @@ register<bit<1>>(1) active_batch;
 // Chỉ số phần tử đầu tiên trong số các phần tử dành cho batch thứ n là n * MAX_SEGMENTS_PER_BATCH (n = 0 hoặc 1).
 register<data_t>(MAX_SEGMENTS_PER_BATCH * 2) data_queues;
 
+// Một register nữa lưu độ dài thực tế của payload gốc của gói tin được parse
+// Phục vụ cho mã hoá length-value
+register<bit<8>>(MAX_SEGMENTS_PER_BATCH * 2) payload_lengths;
+
 // Lưu địa chỉ MAC đích của gói tin được xử lý liền trước, sẽ được dùng để kiểm tra xem
-// Có tiếp tục tổng hợp hay không.
+// có tiếp tục tổng hợp hay không.
 // Do chỉ cần lưu giá trị của gói tin liền trước, 1 phần tử là đủ.
 register<macAddr_t>(1) last_dst_addr;
 
@@ -82,8 +87,11 @@ header arp_t {
 // Vì vậy, cần parse payload như một header nếu muốn tác động (ghép payload).
 
 header bytechunk_payload_t {
-    // Đc sử dụng để tạo một header stack với tối đa 40 phần tử dạng bytechunk_payload_t.
-    
+    // Đc sử dụng để tạo một header stack với tối đa 40 phần tử dạng bytechunk_payload_t,
+    // mỗi phần tử chứa 1 byte của payload gốc.
+    // Header stack này sẽ được sử dụng trong parser để parse payload gốc vào đó.
+    // Việc parse từng byte của payload vào các phần tử của header stack này sẽ giúp tránh lỗi PacketTooShort
+    // khi parse payload (ở cuối gói tin) có kích thước nhỏ hơn 40 byte thẳng vào segment_payload_t.
     bit<8> chunk;
 }
 
