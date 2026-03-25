@@ -5,6 +5,8 @@ action formAggPacket() {
     active_batch.read(inactive_q, 0); // get active queue
     inactive_q = inactive_q ^ 1; // get inactive queue
 
+    // Chỉ kích hoạt và gắn hdr.aggmeta khi có nhiều hơn 1 segment được tổng hợp
+    // vì nếu chỉ có 1 segment thì cũng không khác gì gói tin gốc.
     if (mta.aggCount > 1) {
         hdr.aggmeta.setValid();
         hdr.aggmeta.segCount = (bit<8>)mta.aggCount; // set segment count in header metadata

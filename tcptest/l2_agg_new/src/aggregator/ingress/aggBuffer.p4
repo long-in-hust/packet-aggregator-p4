@@ -88,6 +88,7 @@ action aggregating() {
     }
 }
 
+// Địa chỉ sẽ được truyền vào bảng qua API từ control plane.
 table tbl_aggregation {
     key = {
         hdr.ethernet.dstAddr: exact;
