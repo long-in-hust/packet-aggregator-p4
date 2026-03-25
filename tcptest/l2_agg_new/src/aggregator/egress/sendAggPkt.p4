@@ -1,7 +1,6 @@
 action formAggPacket() {
     bit<1> inactive_q;
     bit<32> index;
-    data_t segment_data;
 
     active_batch.read(inactive_q, 0); // get active queue
     inactive_q = inactive_q ^ 1; // get inactive queue

@@ -8,10 +8,9 @@
 #define APPEND_SEGMENT                     \
     if (mta.aggCount > 0) {                           \
         index = (bit<32>)inactive_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)mta.aggCount - 1;  \
-        data_queues.read(segment_data, index);  \
+        data_queues.read(hdr.parsed_payload[0].data, index);  \
         hdr.parsed_payload.push_front(1);   \
         hdr.parsed_payload[0].setValid();    \
-        hdr.parsed_payload[0].data = segment_data;   \
         payload_lengths.read(hdr.parsed_payload[0].length, index);  \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
