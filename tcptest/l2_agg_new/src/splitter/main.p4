@@ -41,7 +41,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         // nó chỉ là gói IPv4 bình thường.
         // Ngược lại, gói tin IPv4 được recirculate là để tái sử dụng phần header
         // và gắn vào segment tiếp theo trước khi gửi ra
-        transition select (mta.resubmitted) {
+        transition select (mta.recirculated) {
             true: parse_payloads;
             default: accept;
         }
@@ -68,6 +68,7 @@ control checksum_verifier(inout headers hdr, inout metadata mta) {
 control sw_ingress(inout headers hdr, inout metadata mta,
                 inout standard_metadata_t std_meta) {
     // Hành động drop() phải được định nghĩa vì mark_to_drop() là một hàm extern, không thể được gọi từ trong bảng.
+    // Bảng ARP và bảng forwar sẽ dùng drop như hành động mặc định nếu không khớp với mục nào.
     action drop() {
         mark_to_drop(std_meta);
     }
@@ -103,7 +104,8 @@ control sw_ingress(inout headers hdr, inout metadata mta,
 
 control sw_egress(inout headers hdr, inout metadata mta,
                inout standard_metadata_t std_meta) {
-                // default drop action
+    
+    // hành động này là một thủ tục, không thực hiện ngay mà sẽ được gọi trong khối apply
     action drop() {
         mark_to_drop(std_meta);
     }
@@ -113,11 +115,26 @@ control sw_egress(inout headers hdr, inout metadata mta,
     apply {
         if (hdr.ethernet.isValid())
         {
-            if ((hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) || mta.resubmitted) {
+            // Nếu đây là gói tin clone, kết thúc ngay control,
+            // Lý do là gói tin này đã được gắn sẵn payload cần thiết để gửi đi.
+            // Lý do clone sẽ được giải thích ở trong file egress/sendSplitPkt.p4, ở cuối action formSegPacket().
+            if (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
+                return;
+            }
+
+            // Dùng header để dụng thành thành gói tin ban đầu nếu đạt một trong 2 điều kiện:
+            // 1: hdr.ethernet.etherType == EtherType.L3AGG -> đây là header của gói tin tổng hợp
+            // Vì payload đã được trích ra và lưu ở control ingress, có thể tận dụng header này
+            // để gán segment và dựng thành gói tin ban đầu.
+
+            // 2: mta.recirculated == true -> đây là gói tin được tái lưu thông với mục đích
+            // chuẩn bị gắn segment tiếp theo vào payload và gửi đi.
+            if ((hdr.ethernet.etherType == EtherType.L3AGG) || mta.recirculated) {
                 formSegPacket();
             }
         }
         else {
+            // loại bỏ gói tin không hợp lệ
             drop();
         }
     }

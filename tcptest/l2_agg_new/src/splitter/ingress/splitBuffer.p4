@@ -8,7 +8,7 @@ action save_buffer() {
 
     // Đọc số lượng segment hiện có trong register.
     count_variable.read(current_count, 0);
-    // Đọc chỉ số đuôi của hàng đợi (không phải native, được dựng lên thông qua register)
+    // Đọc chỉ số đuôi của "hàng đợi" (không phải native, được dựng lên thông qua register)
     head_tail_index.read(current_tail, 1);
 
     // save each segment into the register
