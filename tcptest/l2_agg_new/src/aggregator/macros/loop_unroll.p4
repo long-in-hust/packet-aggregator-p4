@@ -5,10 +5,10 @@
 // chỉ số batch không hoạt động * số segment tối đa mỗi batch + số segment đã có trong batch đó - 1 (vì chỉ số bắt đầu từ 0)
 #define APPEND_SEGMENT                     \
     if (mta.aggCount > 0) {                           \
-        index = (bit<32>)inactive_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)mta.aggCount - 1;  \
-        data_queues.read(hdr.parsed_payload[0].data, index);  \
         hdr.parsed_payload.push_front(1);   \
         hdr.parsed_payload[0].setValid();    \
+        index = (bit<32>)inactive_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)mta.aggCount - 1;  \
+        data_queues.read(hdr.parsed_payload[0].data, index);  \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \
