@@ -39,3 +39,5 @@
         - [ ] Tạo thêm một register chứa flow
         - [ ] Tạo thêm một register đóng vai trò như bảng đối chiếu giữa ID (chỉ số) và MAC đích (giá trị)
         - [ ] Tạo clone session riêng cho từng flow với cổng ra tương ứng
+
+- [ ] Viết lại các lệnh gọi control plane bằng lệnh simple_switch_cli và giải thích được ý nghĩa
