@@ -53,10 +53,6 @@ register<bit<1>>(1) active_batch;
 // Chỉ số phần tử đầu tiên trong số các phần tử dành cho batch thứ n là n * MAX_SEGMENTS_PER_BATCH (n = 0 hoặc 1).
 register<data_t>(MAX_SEGMENTS_PER_BATCH * 2) data_queues;
 
-// Một register nữa lưu độ dài thực tế của payload gốc của gói tin được parse
-// Phục vụ cho mã hoá length-value
-register<bit<8>>(MAX_SEGMENTS_PER_BATCH * 2) payload_lengths;
-
 // Lưu địa chỉ MAC đích của gói tin được xử lý liền trước, sẽ được dùng để kiểm tra xem
 // có tiếp tục tổng hợp hay không.
 // Do chỉ cần lưu giá trị của gói tin liền trước, 1 phần tử là đủ.
@@ -96,9 +92,6 @@ header bytechunk_payload_t {
 }
 
 header segment_payload_t {
-    // độ dài thực tế của segment
-    bit<8> length;
-    // dữ liệu thật của segment
     data_t data;
     // bit<160> ipv4;
     // bit<64> udp;

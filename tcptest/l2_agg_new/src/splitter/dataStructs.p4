@@ -48,13 +48,8 @@ header arp_t {
 header agg_segment_t {
     // bit<160> ipv4;
     // bit<64> udp;
-    // bit<32> coap;
-    // bit<16> payload;
+    // bit<96> payload;
     data_t data;
-}
-
-header bytechunk_payload_t {
-    bit<8> chunk;
 }
 
 header aggmeta_t {
@@ -83,7 +78,6 @@ struct headers {
     arp_t        arp;
     aggmeta_t    aggmeta;
     agg_segment_t[LOG_QUEUE_MAX_ALLOC_ELEMENTS - 1] payload;
-    bytechunk_payload_t[40] bytechunk_payload;
 }
 
 struct metadata {

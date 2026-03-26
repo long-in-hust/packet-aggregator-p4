@@ -13,7 +13,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         transition select(hdr.ethernet.etherType) {
             EtherType.ARP:  parse_arp;
             EtherType.L3AGG: parse_l3agg;
-            EtherType.IPV4: check_ipv4;
+            // EtherType.IPV4: check_ipv4;
             default:        accept;
         }
     }
@@ -29,13 +29,13 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         transition parse_payloads;
     }
 
-    state check_ipv4{
-        mta.segCountRemaining = 1;
-        transition select (mta.resubmitted) {
-            true: parse_payloads;
-            default: accept;
-        }
-    }
+    // state check_ipv4{
+    //     mta.segCountRemaining = 1;
+    //     transition select (mta.resubmitted) {
+    //         true: parse_payloads;
+    //         default: accept;
+    //     }
+    // }
 
     state parse_payloads {
         pkt.extract(hdr.payload.next);
@@ -70,8 +70,10 @@ control sw_ingress(inout headers hdr, inout metadata mta,
                 arp_learning.apply();
             }
             else {
-                if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid() && !mta.resubmitted) {
+                if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
                     save_buffer();
+                } else if (mta.resubmitted) {
+                    truncate(34); // 14 bytes ethernet + 20 bytes ipv4
                 }
                 eth_forward.apply();
             }
@@ -114,7 +116,7 @@ control sw_deparser(packet_out pkt, in headers hdr) {
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.arp);
         pkt.emit(hdr.aggmeta);
-        pkt.emit(hdr.bytechunk_payload);
+        pkt.emit(hdr.payload);
     }
 }
 

@@ -16,7 +16,7 @@ action reset_batch(inout bit<1> param_actv_q) {
     // Vì biến 1 bit nên có thể XOR với 1 để chuyển đổi giữa 0 và 1
     param_actv_q = param_actv_q ^ 1;
     // Ghi chỉ số mới vào active_batch để cập nhật batch đang hoạt động
-    active_batch.write(0, param_actv_q ^ 1);
+    active_batch.write(0, param_actv_q);
     // đánh dấu batch cũ đã sẵn sàng để ghép vào gói tin hiện tại và gửi đi
     mta.toggleSendAgg = 1;
 }
@@ -33,8 +33,6 @@ action aggregateSaveBuffer(in bit<6> param_current_count, in bit<1> param_actv_q
     bit<32> write_index = (bit<32>)param_actv_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)param_current_count;
     // Ghi dữ liệu payload vào data_queues tại chỉ số write_index
     data_queues.write(write_index, mta.payload_data);
-    // Ghi độ dài thực tế của payload gốc vào payload_lengths tại chỉ số write_index
-    payload_lengths.write(write_index, (bit<8>)mta.segLen);
     // Tăng số segment đã có trong batch đó lên 1
     current_batch_count.write((bit<32>)param_actv_q, (bit<6>)(param_current_count + 1));
 }

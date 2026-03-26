@@ -9,7 +9,6 @@
         data_queues.read(hdr.parsed_payload[0].data, index);  \
         hdr.parsed_payload.push_front(1);   \
         hdr.parsed_payload[0].setValid();    \
-        payload_lengths.read(hdr.parsed_payload[0].length, index);  \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \
