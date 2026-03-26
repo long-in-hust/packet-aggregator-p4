@@ -107,10 +107,14 @@ def main(p4info_file_path, bmv2_file_path):
         writeForwardingRules(p4info_helper, sw=s2, dst_mac=mac, out_port=switch_port['s2'][mac])
     
     # Create clone session on s2
-    replicas = [
+    replicas1 = [
         {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1}
     ]
-    createCloneSession(s2, session_id=1, replicas=replicas)
+    replicas2 = [
+        {'egress_port':switch_port['s2']['00:00:00:00:00:04'], 'instance':1}
+    ]
+    createCloneSession(s2, session_id=1, replicas=replicas1)
+    createCloneSession(s2, session_id=2, replicas=replicas2)
 
     # Read table entries to check changes
     readTableRules(p4info_helper, s2)

@@ -118,16 +118,16 @@ control checksum_verifier(inout headers hdr, inout metadata mta) {
 control sw_ingress(inout headers hdr, inout metadata mta,
                 inout standard_metadata_t std_meta) {
     
-    // Hành động drop được định nghĩa vì gọi drop() ngắn gọn hơn viết đầy đủ mark_to_drop(std_meta) mỗi lần cần drop gói tin.
-    // Hiện tại ở Ingress việc định nghĩa này không thực sự cần thiết hoặc bắt buộc.
+    // Hành động drop() phải được định nghĩa vì mark_to_drop() là một hàm extern, không thể được gọi từ trong bảng.
+    // Hành động này là một thủ tục và sẽ được gọi từ trong bảng hoặc trong khối apply(), chứ chưa chạy ngay
     action drop() {
-        // Đánh dấu egress_spec bằng DROP_PORT,
+        // Đánh dấu std_meta.egress_spec bằng DROP_PORT,
         // gói tin sẽ được chuyển tới cổng này
         // trước khi vào control tiếp theo và bị bỏ đi.
         mark_to_drop(std_meta);
     }
     
-    // Sử dụng include file p4 khác vì mã nguồn dài và cần được chia nhỏ để dễ đọc và tác động hơn.
+    // Include file p4 khác vì mã nguồn dài và cần được chia nhỏ để dễ đọc và tác động hơn.
     #include "ingress/L2Actions.p4"
 
     #include "ingress/aggBuffer.p4"
