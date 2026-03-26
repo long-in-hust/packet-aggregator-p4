@@ -381,7 +381,7 @@ def get_args():
     parser.add_argument('-p', '--pcap-dir', type=str, required=False, default=default_pcaps)
     parser.add_argument('-j', '--switch_json', type=str, required=False)
     parser.add_argument('-b', '--behavioral-exe', help='Path to behavioral executable',
-                                type=str, required=False, default='simple_switch_grpc')
+                                type=str, required=False, default='simple_switch')
     return parser.parse_args()
 
 
