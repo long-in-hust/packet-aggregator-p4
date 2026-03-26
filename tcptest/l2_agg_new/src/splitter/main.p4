@@ -61,7 +61,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
 
 control checksum_verifier(inout headers hdr, inout metadata mta) {
     apply {
-        // Will leave it empty for now
+        // Tạm bỏ qua và chưa xét đến bước này
     }
 }
 
@@ -80,16 +80,22 @@ control sw_ingress(inout headers hdr, inout metadata mta,
         if (hdr.ethernet.isValid())
         {
             if (hdr.ethernet.etherType == EtherType.ARP && hdr.arp.isValid()) {
+                // Không áp dụng trích segment cho các gói ARP
+                // Áp dụng bảng học ARP để phân giải IPv4 sang MAC và báo về host nguồn.
                 arp_learning.apply();
             }
             else {
                 if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
+                    // Trích các segment từ payload nếu đó là gói tổng hợp hợp lệ
                     save_buffer();
                 }
+                // Chuyển tiếp Layer 2 như gói tin bình thường nếu header ethernet hợp lệ
+                // và không phải ARP (cần gửi ra đúng cồng đi vào).
                 eth_forward.apply();
             }
         }
         else {
+            // Bỏ gói tin không có header Ethernet hợp lệ
             drop();
         }
     }
