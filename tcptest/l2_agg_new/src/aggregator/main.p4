@@ -4,6 +4,8 @@
 #define CPU_PORT 510
 #define DROP_PORT 511
 
+#define DEVICE_MAC 0x0f0001000001
+
 #include "dataStructs.p4"
 #include "macros/loop_unroll.p4"
 

@@ -3,9 +3,9 @@
 
 /*
     Số segment tối đa được chứa trong register
-    Mặc dù một gói tin tổng hợp chỉ chứa tối đa 13 segment, để chuẩn bị không gian cho trường hợp
+    Mặc dù một gói tin tổng hợp chỉ chứa tối đa 11 segment, để chuẩn bị không gian cho trường hợp
     các gói tin tổng hợp được gửi đến nhanh và nhiều hơn so với tốc độ xử lý của thiết bị,
-    số phần tử của register data_queue phải lớn hơn nhiều so với mức 13.
+    số phần tử của register data_queue phải lớn hơn nhiều so với mức 11.
 */
 const bit<10> MAX_SEGMENT_NUMBER   = 256;
 
@@ -30,6 +30,10 @@ có thể sử dụng thông tin được ghi vào register trong pipeline của
 // Không cần chia nhỏ các chỉ số register này theo batch hay flow,
 // vì từng segment một sẽ được lấy ra, không theo nhóm nào cả.
 register<data_t>((bit<32>)MAX_SEGMENT_NUMBER)    data_queue;
+
+// Register này lưu địa chỉ nguồn của từng segment tương ứng được lưu trong data_queues
+// Chỉ số phần tử cũng tương tự register data_queues
+register<macAddr_t>((bit<32>)MAX_SEGMENT_NUMBER) segment_src_macs;
 
 // Lưu trữ số lượng segment đã được lưu trong register data_queue.
 // Vì chỉ có một register, một không gian lưu trữ chung cho tất cả các segment,
@@ -65,10 +69,18 @@ header arp_t {
   ip4Addr_t dst_ip;
 }
 
+// Đây là cấu trúc payload gói tin tổng hợp đi vào switch
 header agg_segment_t {
+    macAddr_t src_mac; // Địa chỉ MAC nguồn của segment, sẽ được dùng khi khôi phục lại gói tin gốc.
+    
+    data_t data;
     // bit<160> ipv4;
     // bit<64> udp;
     // bit<96> payload;
+}
+
+// Đây là cấu trúc payload sẽ được gửi ra ngoài sau khi khôi phục
+header recovered_payload_t {
     data_t data;
 }
 
@@ -97,7 +109,8 @@ struct headers {
     ethernet_t   ethernet;
     arp_t        arp;
     aggmeta_t    aggmeta;
-    agg_segment_t[13] payload;
+    agg_segment_t[13] segments;
+    recovered_payload_t recovered_payload;
 }
 
 struct metadata {

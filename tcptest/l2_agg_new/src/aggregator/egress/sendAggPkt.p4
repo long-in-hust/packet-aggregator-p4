@@ -11,6 +11,7 @@ action formAggPacket() {
         hdr.aggmeta.setValid();
         hdr.aggmeta.segCount = (bit<8>)mta.aggCount; // gán số segment hiện có
         hdr.ethernet.etherType = EtherType.L3AGG; // đặt EtherType để nhận biết gói tin tổng hợp
+        hdr.ethernet.srcAddr = DEVICE_MAC; // giữ nguyên địa chỉ MAC nguồn
     }
 
     APPEND_PAYLOAD

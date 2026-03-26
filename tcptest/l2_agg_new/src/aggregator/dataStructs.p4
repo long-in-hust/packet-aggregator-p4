@@ -1,4 +1,4 @@
-const int MAX_SEGMENTS_PER_BATCH = 13; // (51 + 512 - 14 - 1) div 41 = 13 (số dư là 15).
+const int MAX_SEGMENTS_PER_BATCH = 11; // (51 + 512 - 14 - 1) div 47 = 13 (số dư là 15).
 // 51 byte là kích thước tối thiểu của mỗi ethernet frame L2 (không tính preamble, SFD và FCS)
 // được gửi trong kịch bản thủ nghiệm. Mỗi frame bao gồm:
 // 14 byte (Eth header) + 20 byte (IPv4 header) + 8 byte (UDP header) + 9 byte (kích thước tối thiểu của payload) = 51 byte
@@ -13,7 +13,7 @@ const int MAX_SEGMENTS_PER_BATCH = 13; // (51 + 512 - 14 - 1) div 41 = 13 (số 
 /// 1 byte độ dài thực tế + 40 byte lưu dữ liệu (nếu dữ liệu nhỏ hơn 40 byte, phần còn lại sẽ được điền bằng các bit 0).
 
 // Do đó, số segment tối đa có thể được tổng hợp trong một batch là:
-// 548 div 41 = 13
+// 548 div 47 = 11
 
 /* 
 ------- Định nghĩa một số kiểu dữ liệu hay dùng --------
@@ -52,6 +52,10 @@ register<bit<1>>(1) active_batch;
 // số segment tối đa cho mỗi batch * số batch (13 * 2 = 26).
 // Chỉ số phần tử đầu tiên trong số các phần tử dành cho batch thứ n là n * MAX_SEGMENTS_PER_BATCH (n = 0 hoặc 1).
 register<data_t>(MAX_SEGMENTS_PER_BATCH * 2) data_queues;
+
+// Register này lưu địa chỉ nguồn của từng segment tương ứng được lưu trong data_queues
+// Chỉ số phần tử cũng tương tự register data_queues
+register<macAddr_t>(MAX_SEGMENTS_PER_BATCH * 2) segment_src_macs;
 
 // Lưu địa chỉ MAC đích của gói tin được xử lý liền trước, sẽ được dùng để kiểm tra xem
 // có tiếp tục tổng hợp hay không.
@@ -92,6 +96,7 @@ header bytechunk_payload_t {
 }
 
 header segment_payload_t {
+    macAddr_t src_mac; // Địa chỉ MAC nguồn của segment, sẽ được dùng ở switch tách khi khôi phục lại gói tin gốc.
     data_t data;
     // bit<160> ipv4;
     // bit<64> udp;

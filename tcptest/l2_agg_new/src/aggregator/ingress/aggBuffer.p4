@@ -33,6 +33,8 @@ action aggregateSaveBuffer(in bit<6> param_current_count, in bit<1> param_actv_q
     bit<32> write_index = (bit<32>)param_actv_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)param_current_count;
     // Ghi dữ liệu payload vào data_queues tại chỉ số write_index
     data_queues.write(write_index, mta.payload_data);
+    // Ghi địa chỉ MAC nguồn của segment vào segment_src_macs tại cùng chỉ số write_index
+    segment_src_macs.write(write_index, hdr.ethernet.srcAddr);
     // Tăng số segment đã có trong batch đó lên 1
     current_batch_count.write((bit<32>)param_actv_q, (bit<6>)(param_current_count + 1));
 }

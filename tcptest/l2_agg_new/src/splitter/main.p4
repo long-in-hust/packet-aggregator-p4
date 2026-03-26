@@ -35,22 +35,27 @@ parser pkt_parser(packet_in pkt, out headers hdr,
     }
 
     state check_ipv4{
-        // Gói tin IPv4 về cơ bản tương đương 1 segment
-        mta.segCountRemaining = 1;
         // Nếu đây không phải gói tin được recirculate từ egress,
-        // nó chỉ là gói IPv4 bình thường.
+        // nó chỉ là gói IPv4 bình thường, không cần parse gì thêm, chỉ cần chuyển tiếp như gói tin bình thường.
         // Ngược lại, gói tin IPv4 được recirculate là để tái sử dụng phần header
-        // và gắn vào segment tiếp theo trước khi gửi ra
+        // và gắn vào segment tiếp theo trước khi gửi ra.
+        // Do đó cần parse payload của frame ethernet này để thay bằng segment tiếp theo.
         transition select (mta.recirculated) {
-            true: parse_payloads;
+            true: parse_ipv4;
             default: accept;
         }
+    }
+
+    state parse_ipv4 {
+        // Parse payload của frame ethernet để thay bằng segment tiếp theo
+        pkt.extract(hdr.recovered_payload);
+        transition accept;
     }
 
     // Kết hợp header_stack.next và transition vào chính trạng thái hiện hành
     // để triển khai vòng lặp mà không cần ghi cụ thể số lần.
     state parse_payloads {
-        pkt.extract(hdr.payload.next);
+        pkt.extract(hdr.segments.next);
         mta.segCountRemaining = mta.segCountRemaining - 1;
         transition select(mta.segCountRemaining) {
             0: accept;
@@ -150,7 +155,7 @@ control sw_deparser(packet_out pkt, in headers hdr) {
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.arp);
         pkt.emit(hdr.aggmeta);
-        pkt.emit(hdr.payload);
+        pkt.emit(hdr.recovered_payload);
     }
 }
 

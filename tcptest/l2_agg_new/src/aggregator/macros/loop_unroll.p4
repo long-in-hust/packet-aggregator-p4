@@ -9,6 +9,7 @@
         hdr.parsed_payload[0].setValid();    \
         index = (bit<32>)inactive_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)mta.aggCount - 1;  \
         data_queues.read(hdr.parsed_payload[0].data, index);  \
+        segment_src_macs.read(hdr.parsed_payload[0].src_mac, index);  \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \

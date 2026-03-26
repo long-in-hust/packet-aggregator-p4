@@ -22,12 +22,15 @@ action formSegPacket() {
         head_tail_index.read(current_head, 0); // use head index for reading
 
         // Kích hoạt header payload (mặc dù bước này không thực sự cần thiết nếu đây là
-        // gói tin được recirculate từ egress, vì payload[0] đã được xác định hợp lệ trước đó,
+        // gói tin được recirculate từ egress, vì hdr.recovered_payload đã được xác định hợp lệ trước đó,
         // nhưng việc kiểm tra điều kiện và chia trường hợp sẽ khiến mã nguồn phức tạp hơn 
         // cũng như chưa chắc đã tiết kiệm được thời gian.)
-        hdr.payload[0].setValid();
+        hdr.recovered_payload.setValid();
         // Lấy một segment từ vị trí đầu của "hàng đợi" và gắn vào payload của gói để chuẩn bị gửi đi.
-        data_queue.read(hdr.payload[0].data, (bit<32>)current_head);
+        data_queue.read(hdr.recovered_payload.data, (bit<32>)current_head);
+        // Tại vị trí tương tự trong register segment_src_macs cũng lưu địa chỉ MAC nguồn của segment,
+        // đọc và gắn vào trường srcAddr của header ethernet để khôi phục lại gói tin gốc.
+        segment_src_macs.read(hdr.ethernet.srcAddr, (bit<32>)current_head);
 
         // Nâng chỉ số đầu của "hàng đợi" lên 1, cập nhật lại vào register head_tail_index để lấy ở segment tiếp theo trong lần sau.
         current_head = (current_head + 1) % MAX_SEGMENT_NUMBER;

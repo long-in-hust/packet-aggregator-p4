@@ -26,7 +26,7 @@ def writeArpRules(p4info_helper, sw, arp_request_ip, arp_reply_mac):
             },
             action_name="sw_ingress.mac_resolve",
             action_params={
-                "dst_mac":arp_reply_mac,
+                "resolved_mac":arp_reply_mac,
             })
     sw.WriteTableEntry(table_entry)
     print("Install ARP rule into switch %s" % sw.name)
