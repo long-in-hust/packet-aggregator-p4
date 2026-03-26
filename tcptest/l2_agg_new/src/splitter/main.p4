@@ -72,8 +72,6 @@ control sw_ingress(inout headers hdr, inout metadata mta,
             else {
                 if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
                     save_buffer();
-                } else if (mta.resubmitted) {
-                    truncate(34); // 14 bytes ethernet + 20 bytes ipv4
                 }
                 eth_forward.apply();
             }

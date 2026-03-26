@@ -30,6 +30,7 @@ action formSegPacket() {
         
         clone(CloneType.E2E, 1);
         mta.resubmitted = true;
+        truncate(34);
         recirculate_preserving_field_list(1);
     } else {
         drop();
