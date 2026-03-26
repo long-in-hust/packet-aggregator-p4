@@ -4,9 +4,13 @@
 // Tham số dạng "inout" kết hợp khả năng của cả "in" (sao chép giá trị đối số truyền vào)
 // và "out" (cho phép truyền giá trị đã thay đổi ra ngoài sau khi thực hiện action).
 action reset_batch(inout bit<1> param_actv_q) {
-    // đặt lại số phần tử của batch đang hoạt động về 0
-    // viết vào thanh ghi current_batch_count tại chỉ số là chỉ số của batch đang hoạt động
-    // Các phương thức read và write của register đều yêu cầu tham số chỉ số có kiểu bit<32>, nên cần cast param_actv_q sang bit<32>
+    // Trước khi đặt lại số segment trong của batch đang hoạt động về 0,
+    // cần đọc số segment đã có trong batch đó vào mta.aggCount để có thể gán vào header aggmeta khi tạo gói tin tổng hợp.
+    // Các phương thức read và write của register đều yêu cầu tham số chỉ số có kiểu bit<32>,
+    // nên cần cast param_actv_q sang bit<32>.
+    current_batch_count.read(mta.aggCount, (bit<32>)param_actv_q);
+    // Đặt lại số segment về 0
+    // viết vào thanh ghi current_batch_count tại chỉ số là chỉ số của batch đang hoạt động.
     current_batch_count.write((bit<32>)param_actv_q, 0);
     // Chuyển chỉ số batch đang hoạt động sang batch còn lại
     // Vì biến 1 bit nên có thể XOR với 1 để chuyển đổi giữa 0 và 1
@@ -55,8 +59,8 @@ action aggregating() {
     current_batch_count.read(count, (bit<32>)active_q);
 
     // Lấy địa chỉ MAC đích của gói tin liền trước để so sánh với địa chỉ MAC đích của gói hiện tại
-    // Do phương thức read của register không trực tiếp trả về giá trị đọc được,
-    // mà ghi giá trị vào biến được truyền vào dưới dạng tham số thứ nhất, nên không thể so sánh trực tiếp.
+    // Do phương thức read của register trả về kiểu void, giá trị đọc không được trả về trực tiếp
+    // mà được truyền lại ra ngoài qua tham số thứ nhất, nên không thể so sánh trực tiếp.
     // Cần gán vào một biến tạm như last_dest_mac để so sánh.
     macAddr_t last_dest_mac;
     last_dst_addr.read(last_dest_mac, 0);
