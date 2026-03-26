@@ -42,13 +42,6 @@ action aggregateSaveBuffer(in bit<6> param_current_count, in bit<1> param_actv_q
 // Hành động đầu vào cho luồng tổng hợp gói tin. Hành động này sẽ xét các điều kiện để quyết định việc tiếp tục
 // lưu gói tin vào batch hiện tại hay là tạo gói tin tổng hợp mới từ batch đã đầy và chuyển sang batch còn lại để lưu gói tin tiếp theo.
 action aggregating() {
-    // 40 phần tử byte này đã được sao chép vào mta.payload_data, và sẽ được ghi vào data_queues trong action aggregateSaveBuffer,
-    // nên sẽ không còn được sử dụng nữa. Do đó cần khử chúng khỏi header stack để giảm chiếm dụng phần native buffer được BMv2 cấp
-    // cho gói tin (độ dài gốc + 512 byte), cũng như tránh dư thừa/sai lệch thông tin khi gửi gói tin đi.
-    // Phương thức pop_front với đối số 40 sẽ dịch con trỏ đầu stack lùi về 40 phần tử
-    // và đánh dấu 40 phần tử này là inValid (không hợp lệ/không tồn tại).
-    hdr.original_payload.pop_front(40);
-
     // Lấy chỉ số batch đang hoạt động từ register active_batch
     bit<1> active_q;
     active_batch.read(active_q, 0);
