@@ -22,7 +22,8 @@ def configureP4Switch(**switch_args):
     logging.debug("Configuring P4Switch with gRPC")
     class ConfiguredP4Switch(P4Switch):
         def __init__(self, *opts, **kwargs):
-            kwargs.update(switch_args)
+            for key, value in switch_args.items():
+                kwargs.setdefault(key, value)
             P4Switch.__init__(self, *opts, **kwargs)
 
         def describe(self):
@@ -53,8 +54,13 @@ class ExerciseTopo(Topo):
         host_links.sort(key=link_sort_key)
         switch_links.sort(key=link_sort_key)
 
-        for sw in switches:
-            self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw))
+        for sw_name, sw_dict in switches.items():
+            switch_params = {
+                'log_file': "%s/%s.log" % (log_dir, sw_name)
+            }
+            if sw_dict.get('json_path'):
+                switch_params['json_path'] = sw_dict['json_path']
+            self.addSwitch(sw_name, **switch_params)
 
         for link in host_links:
             host_name = link['node1']
@@ -134,7 +140,7 @@ class ExerciseRunner:
 
     def formatLatency(self, l):
         """ Helper method for parsing link latencies from the topology json. """
-        if isinstance(l, (str, unicode)):
+        if isinstance(l, str):
             return l
         else:
             return str(l) + "ms"
@@ -161,6 +167,9 @@ class ExerciseRunner:
             topo = json.load(f)
         self.hosts = topo['hosts']
         self.switches = topo['switches']
+        self.switch_jsons = self.parse_switch_jsons(switch_json)
+        for sw_name, json_path in self.switch_jsons.items():
+            self.switches[sw_name]['json_path'] = json_path
         self.links = self.parse_links(topo['links'])
 
         # Ensure all the needed directories exist and are directories
@@ -173,6 +182,36 @@ class ExerciseRunner:
         self.pcap_dir = pcap_dir
         self.switch_json = switch_json
         self.bmv2_exe = bmv2_exe
+
+
+    def parse_switch_jsons(self, switch_json_arg):
+        """Parse switch json argument.
+
+           Accepts either:
+           - a single json path (applied to all switches)
+           - a comma-delimited list with one json per switch, ordered by
+             sorted switch name (e.g. s1,s2,...)
+        """
+        if not switch_json_arg:
+            return {}
+
+        json_paths = [p.strip() for p in switch_json_arg.split(',') if p.strip()]
+        if not json_paths:
+            return {}
+
+        if len(json_paths) == 1:
+            return dict((sw_name, json_paths[0]) for sw_name in self.switches.keys())
+
+        switch_names = sorted(self.switches.keys())
+        if len(json_paths) != len(switch_names):
+            raise Exception(
+                "Expected either 1 json or %d jsons (one per switch), got %d" %
+                (len(switch_names), len(json_paths))
+            )
+
+        mapping = dict(zip(switch_names, json_paths))
+        self.logger('Per-switch JSON mapping: %s' % mapping)
+        return mapping
 
 
     def run_exercise(self):
@@ -265,11 +304,10 @@ class ExerciseRunner:
         """
         self.logger("Building mininet topology.")
 
-        self.topo = ExerciseTopo(self.hosts, self.switches.keys(), self.links, self.log_dir)
+        self.topo = ExerciseTopo(self.hosts, self.switches, self.links, self.log_dir)
 
         switchClass = configureP4Switch(
                 sw_path=self.bmv2_exe,
-                json_path=self.switch_json,
                 log_console=True,
                 pcap_dump=self.pcap_dir)
 
@@ -379,7 +417,10 @@ def get_args():
                         type=str, required=False, default='./topology.json')
     parser.add_argument('-l', '--log-dir', type=str, required=False, default=default_logs)
     parser.add_argument('-p', '--pcap-dir', type=str, required=False, default=default_pcaps)
-    parser.add_argument('-j', '--switch_json', type=str, required=False)
+    parser.add_argument(
+        '-j', '--switch_json', type=str, required=False,
+        help='P4 JSON path(s): single path for all switches, or comma-separated list (one per switch ordered by switch name)'
+    )
     parser.add_argument('-b', '--behavioral-exe', help='Path to behavioral executable',
                                 type=str, required=False, default='simple_switch')
     return parser.parse_args()

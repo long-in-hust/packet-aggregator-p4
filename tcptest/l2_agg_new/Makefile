@@ -22,7 +22,7 @@ run_grpc:
 
 run:
 	@echo "Running L2 Aggregator..."
-	cd mininet ; sudo ./run_emu.py -j $(BUILD_DIR)/l2_aggregate.json -j $(BUILD_DIR)/l2_split.json -b simple_switch
+	cd mininet ; sudo ./run_emu.py -j ../$(BUILD_DIR)/l2_aggregate.json,../$(BUILD_DIR)/l2_split.json -b simple_switch
 
 build_aggregator:	dirs $(compiled_json)
 	@echo "---------------------------------"

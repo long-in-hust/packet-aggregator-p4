@@ -76,6 +76,7 @@ class P4Switch(Switch):
         Switch.__init__(self, name, **kwargs)
         assert (sw_path)
         self.sw_path = sw_path
+        self.uses_grpc = 'grpc' in os.path.basename(sw_path)
         # make sure that the provided sw_path is valid
         pathCheck(sw_path)
 
@@ -95,8 +96,8 @@ class P4Switch(Switch):
             logging.debug("Assigning grpc_port: %d", self.grpc_port)
             P4Switch.next_grpc_port += 1
 
-        if check_listening_on_port(self.grpc_port):
-            error('%s cannot bind port %d because it is bound by another process\n' % (self.name, self.grpc_port))
+        if self.uses_grpc and check_listening_on_port(self.grpc_port):
+            error('%s cannot bind gRPC port %d because it is bound by another process\n' % (self.name, self.grpc_port))
             exit(1)
 
         if thrift_port is not None:
@@ -127,11 +128,12 @@ class P4Switch(Switch):
 
 
     def check_switch_started(self, pid):
+        listen_port = self.grpc_port if self.uses_grpc else self.thrift_port
         for _ in range(SWITCH_START_TIMEOUT * 2):
             if not os.path.exists(os.path.join("/proc", str(pid))):
                 logging.warning("Process %d is either terminated or not running at all.", pid)
                 return False
-            if check_listening_on_port(self.grpc_port):
+            if check_listening_on_port(listen_port):
                 return True
             sleep(0.5)
 
@@ -167,11 +169,12 @@ class P4Switch(Switch):
         if self.thrift_port:
             logging.debug("Using Thrift port: %d", self.thrift_port)
             args.extend(['--thrift-port', str(self.thrift_port)])
-        if self.grpc_port:
+        if self.uses_grpc and self.grpc_port:
             logging.debug("Using gRPC port: %d", self.grpc_port)
-            args.append("-- --grpc-server-addr 0.0.0.0:" + str(self.grpc_port))
-        args.append("-- cpu-port 510")
-        
+            args.extend(['--', '--grpc-server-addr', '0.0.0.0:' + str(self.grpc_port)])
+        if self.uses_grpc:
+            args.append("-- cpu-port 510")
+
         cmd = ' '.join(args)
         info(cmd + "\n")
 
