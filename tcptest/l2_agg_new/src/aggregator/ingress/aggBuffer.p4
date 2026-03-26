@@ -1,7 +1,7 @@
 // Hành động này sẽ được gọi trong aggregating() để đánh dấu batch mới được sử dụng để lưu gói tin,
 // đồng thời đánh dấu batch cũ đã sẵn sàng để được ghép vào gói tin hiện tại và gửi đi.
 
-// Tham số dạng "inout" kết hợp khả năng của cả "in" (cho phép thay đổi giá trị trong quá trình thực hiện action)
+// Tham số dạng "inout" kết hợp khả năng của cả "in" (sao chép giá trị đối số truyền vào)
 // và "out" (cho phép truyền giá trị đã thay đổi ra ngoài sau khi thực hiện action).
 action reset_batch(inout bit<1> param_actv_q) {
     // đặt lại số phần tử của batch đang hoạt động về 0
@@ -17,9 +17,13 @@ action reset_batch(inout bit<1> param_actv_q) {
     mta.toggleSendAgg = 1;
 }
 
-// Hành động này sẽ được gọi trong aggregating() để lưu dữ liệu payload của segment vào data_queues
-// Tham số truyền vào với định hướng "in" cho phép thay đổi giá trị trong quá trình thực hiện action
-action aggregateSaveBuffer(in bit<6> param_current_count, bit<1> param_actv_q) {
+// Hành động này sẽ được gọi trong aggregating() để lưu dữ liệu payload của segment vào data_queues.
+// Tham số param_current_count là số segment đã có trong batch đang hoạt động
+// được dùng để tính chỉ số phần tử trong data_queues để ghi dữ liệu, cũng như sẽ được cập nhật tăng lên 1 sau khi ghi.
+// Tham số truyền vào với định hướng "in" sao chép giá trị đối số truyền vào,
+// nhưng không cho phép thay đổi và truyền sự thay đổi ngược ra ngoài.
+// Việc này không cần thiết vì giá trị mới sẽ được ghi vào register.
+action aggregateSaveBuffer(in bit<6> param_current_count, in bit<1> param_actv_q) {
     // Tính chỉ số phần tử trong data_queue để ghi dữ liệu theo công thức:
     // chỉ số trong data_queue = chỉ số batch đang hoạt động * số segment tối đa mỗi batch + số segment đã có trong batch đó
     bit<32> write_index = (bit<32>)param_actv_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)param_current_count;
@@ -51,7 +55,8 @@ action aggregating() {
     current_batch_count.read(count, (bit<32>)active_q);
 
     // Lấy địa chỉ MAC đích của gói tin liền trước để so sánh với địa chỉ MAC đích của gói hiện tại
-    // Do phương thức read của register không trực tiếp trả về giá trị đọc được, mà ghi giá trị vào biến được truyền vào dưới dạng tham số thứ nhất, nên không thể so sánh trực tiếp.
+    // Do phương thức read của register không trực tiếp trả về giá trị đọc được,
+    // mà ghi giá trị vào biến được truyền vào dưới dạng tham số thứ nhất, nên không thể so sánh trực tiếp.
     // Cần gán vào một biến tạm như last_dest_mac để so sánh.
     macAddr_t last_dest_mac;
     last_dst_addr.read(last_dest_mac, 0);
