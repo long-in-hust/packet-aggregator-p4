@@ -1,17 +1,31 @@
 action formAggPacket() {
+    // 40 phần tử byte này đã được nối lại thành 1 segment và ghi vào data_queues trong action aggregateSaveBuffer,
+    // nên sẽ không còn được sử dụng nữa. Do đó cần khử chúng khỏi header stack để giảm chiếm dụng phần native buffer được BMv2 cấp
+    // cho gói tin (độ dài gốc + 512 byte), cũng như tránh dư thừa/sai lệch thông tin khi gửi gói tin đi.
+    // Phương thức pop_front với đối số 40 sẽ dịch con trỏ đầu stack lùi về 40 phần tử
+    // và đánh dấu 40 phần tử này là inValid (không hợp lệ/không tồn tại).
+    hdr.original_payload.pop_front(40);
+
     bit<1> inactive_q;
     bit<32> index;
-    data_t segment_data;
 
-    active_queue.read(inactive_q, 0); // get active queue
-    inactive_q = inactive_q ^ 1; // get inactive queue
+    active_batch.read(inactive_q, 0); // lấy chỉ số batch đang hoạt động
+    inactive_q = inactive_q ^ 1; // tính chỉ số batch còn lại (không hoạt động)
 
+    // Chỉ kích hoạt và gắn hdr.aggmeta khi có nhiều hơn 1 segment được tổng hợp
+    // vì nếu chỉ có 1 segment thì cũng không khác gì gói tin gốc.
     if (mta.aggCount > 1) {
         hdr.aggmeta.setValid();
-        hdr.aggmeta.segCount = (bit<8>)mta.aggCount; // set segment count in header metadata
-        hdr.ethernet.etherType = EtherType.L3AGG; // set EtherType for aggregated packet
+        hdr.aggmeta.segCount = (bit<8>)mta.aggCount; // gán số segment hiện có
+        // gán flow id của batch chuẩn bị được gắn vào gói tổng hợp (đang không thu nhận gói tin)
+        // Giá trị được lưu tại aggmeta.flow_id để đánh dấu gói tin tổng hợp này thuộc flow đó
+        current_flow_id.read(hdr.aggmeta.flow_id, (bit<32>)inactive_q);
+        hdr.ethernet.etherType = EtherType.L3AGG; // đặt EtherType để nhận biết gói tin tổng hợp
+        hdr.ethernet.srcAddr = DEVICE_MAC; // giữ nguyên địa chỉ MAC nguồn
+        APPEND_PAYLOAD
+    } else {
+        hdr.joined_payload.setValid();
+        index = (bit<32>)inactive_q * MAX_SEGMENTS_PER_BATCH; // chỉ lấy phần tử đầu tiên của batch con lại vì chỉ có 1 segment
+        data_queues.read(hdr.joined_payload.data, index);
     }
-
-    APPEND_PAYLOAD
-
 }

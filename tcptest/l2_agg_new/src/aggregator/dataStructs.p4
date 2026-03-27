@@ -1,25 +1,71 @@
-const int LOG_QUEUE_MAX_ALLOC_ELEMENTS = 32;
-const int MAX_BATCH_SIZE_BYTES = 512; // maximum batch size to trigger aggregation
+const int MAX_SEGMENTS_PER_BATCH = 11; // (51 + 512 - 14 - 1) div 47 = 13 (số dư là 15).
+// 51 byte là kích thước tối thiểu của mỗi ethernet frame L2 (không tính preamble, SFD và FCS)
+// được gửi trong kịch bản thủ nghiệm. Mỗi frame bao gồm:
+// 14 byte (Eth header) + 20 byte (IPv4 header) + 8 byte (UDP header) + 9 byte (kích thước tối thiểu của payload) = 51 byte
+
+// Theo thiết kế vốn có của BMv2, phần buffer đc cấp phát cho gói tin đi vào thiết bị có kích thước bằng:
+// kích thước Ethernet Frame + 512 bytes => 51 + 512 = 563
+
+// Do có 14 byte cho Ethernet header, 1 byte để lưu số lượng segment, phần payload tổng hợp sẽ có kích thước tối đa:
+// 563 - 14 - 1 = 548 bytes.
+
+// Thông tin cho mỗi segment bao gồm:
+/// 1 byte độ dài thực tế + 40 byte lưu dữ liệu (nếu dữ liệu nhỏ hơn 40 byte, phần còn lại sẽ được điền bằng các bit 0).
+
+// Do đó, số segment tối đa có thể được tổng hợp trong một batch là:
+// 548 div 47 = 11
 
 /* 
-------- Define custom types --------
+------- Định nghĩa một số kiểu dữ liệu hay dùng --------
 */
-typedef bit<9>  egressSpec_t;
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
-typedef bit<320> data_t; // payload data type
+typedef bit<9>  egressSpec_t; // Định nghĩa kiểu dữ liệu cổng egress của switch P4.
+// Sẽ được dùng để gán cho metadata tiêu chuẩn egress_spec.
+typedef bit<48> macAddr_t; // Định nghĩa kiểu dữ liệu địa chỉ MAC (48 bit hoặc 6 byte).
+typedef bit<32> ip4Addr_t; // Định nghĩa kiểu dữ liệu địa chỉ IPv4 (32 bit hoặc 4 byte).
+// Pipeline này không parse IPv4 nhưng sẽ parse ARP (có chứa địa chỉ IPv4)
+typedef bit<320> data_t; // Kiểu dữ liệu lưu payload của segment. Kích thước tối đa của dữ liệu này là 40 byte (320 bit).
+// Tác giả không dùng varbit vì kiểu dữ liệu này bị hạn chế rất nhiều về khả năng thao tác (sẽ giải thích chi tiết ở dưới).
 
 /*
 ------ Registers ------
+Register là một extern (cấu trúc dữ liệu hoặc method được định nghĩa bởi kiến trúc của target) cho phép lưu trữ trạng thái
+xuyến suốt các gói tin. Thông tin lưu trong register không mất đi khi gói tin được xử lý xong. Do đó pipeline của gói tin sau
+có thể sử dụng thông tin được ghi vào register trong pipeline của gói tin trước.
 */
 
+
+/*
+Tác giả tổng hợp gói tin theo 2 batch luân phiên. Khi một batch đạt giới hạn và chuẩn bị được tạo thành gói tin tổng hợp,
+batch còn lại sẽ được sử dụng để lưu dữ liệu của các gói tin tiếp theo.
+Điều này giúp tránh tình huống gói tin mới đi vào khi batch chưa được tổng hợp xong thành gói tin tổng hợp.
+*/
+
+// số lượng segment đã được lưu trong mỗi batch (hiện tại tối đa là 13)
+// Register này có 2 phần tử (tương ứng 2 batch),
+// mỗi phần tử có độ dài 6 bit (chứa 64 giá trị, dư thừa so với 13, sẽ cân nhắc điều chỉnh sau)
 register<bit<6>>(2) current_batch_count;      
+
+// Lưu chỉ số của batch đang được sử dụng. Do chỉ có 2 batch nên 1 bit (2 giá trị) là đủ.
+register<bit<1>>(1) active_batch;
+
+// Lưu FlowID hiện tại đang được tổng hợp. FlowID sẽ được ghi vào aggmeta.flow_id của gói tin sau tổng hợp.
+// FlowID sẽ được gán dựa trên bảng ánh xạ giữa địa chỉ MAC đích và FlowID.
+// Có 2 phần tử tương ứng với 2 batch.
+register<bit<8>>(2) current_flow_id;
+
+// Register được dùng chung để lưu dữ liệu payload của các segment cho cả 2 batch. Số phần tử của register bằng:
+// số segment tối đa cho mỗi batch * số batch (13 * 2 = 26).
+// Chỉ số phần tử đầu tiên trong số các phần tử dành cho batch thứ n là n * MAX_SEGMENTS_PER_BATCH (n = 0 hoặc 1).
+register<data_t>(MAX_SEGMENTS_PER_BATCH * 2) data_queues;
+
+// Register này lưu địa chỉ nguồn của từng segment tương ứng được lưu trong data_queues
+// Chỉ số phần tử cũng tương tự register data_queues
+register<macAddr_t>(MAX_SEGMENTS_PER_BATCH * 2) segment_src_macs;
+
+// Lưu địa chỉ MAC đích của gói tin được xử lý liền trước, sẽ được dùng để kiểm tra xem
+// có tiếp tục tổng hợp hay không.
+// Do chỉ cần lưu giá trị của gói tin liền trước, 1 phần tử là đủ.
 register<macAddr_t>(1) last_dst_addr;
-
-register<bit<1>>(1) active_queue; // 0 or 1 to indicate which queue is currently active for aggregation
-
-register<data_t>(LOG_QUEUE_MAX_ALLOC_ELEMENTS * 2) data_queues; // queue to store incoming segments for aggregation
-// divided into two halves for two aggregation batches
 
 /* 
 ------- Define headers --------
@@ -42,18 +88,39 @@ header arp_t {
   ip4Addr_t dst_ip;
 }
 
+// P4 không cho tác động trực tiếp vào payload nếu không parse vào kiểu cấu trúc header nào đó.
+// Vì vậy, cần parse payload như một header nếu muốn tác động (ghép payload).
+
 header bytechunk_payload_t {
-    // bit<160> ipv4;
-    // bit<64> udp;
-    // bit<96> udp_payload;
+    // Đc sử dụng để tạo một header stack với tối đa 40 phần tử dạng bytechunk_payload_t,
+    // mỗi phần tử chứa 1 byte của payload gốc.
+    // Header stack này sẽ được sử dụng trong parser để parse payload gốc vào đó.
+    // Việc parse từng byte của payload vào các phần tử của header stack này sẽ giúp tránh lỗi PacketTooShort
+    // khi parse payload (ở cuối gói tin) có kích thước nhỏ hơn 40 byte thẳng vào segment_payload_t.
     bit<8> chunk;
 }
 
-header full_payload_t {
+header segment_payload_t {
+    macAddr_t src_mac; // Địa chỉ MAC nguồn của segment, sẽ được dùng ở switch tách khi khôi phục lại gói tin gốc.
+    data_t data;
+    // bit<160> ipv4;
+    // bit<64> udp;
+    // bit<96> udp_payload; kích thước tối đa của udp payload
+    // (các gói tin sẽ có kích thước udp payload)
+    // Tổng sức chứa của biến: 320 bits (40 bytes)
+    // kích thước thật của segment có thể nhỏ hơn 40 byte.
+    // Lúc này các bit 0 sẽ được để trước hoặc sau dữ liệu thật
+}
+
+// Đây là cấu trúc lưu payload segment từ register, về cơ bản thì chỉ được dùng khi chỉ có 1 segment duy nhất để gắn vào gói tin,
+// nhằm phục dựng lại gói tin bình thường (vì 1 segment cũng không khác gì gói bình thường).
+header joined_payload_t {
     data_t data;
 }
 
 header aggmeta_t {
+    bit<8> flow_id; // Chỉ số flow tổng hợp, một flow tương ứng với 1 địa chỉ đích.
+    // Số segment thực tế trong batch (tối đa 13)
     bit<8> segCount;
 }
 
@@ -78,14 +145,32 @@ struct headers {
     ethernet_t   ethernet;
     arp_t        arp;
     aggmeta_t    aggmeta;
-    bytechunk_payload_t[40] original_payload;
-    full_payload_t[LOG_QUEUE_MAX_ALLOC_ELEMENTS] parsed_payload;
+    bytechunk_payload_t[40] original_payload; // Header stack với tối đa 40 phần tử, tương ứng 40 byte.
+    // Parser có thể parse đủ 40 phần tử này hoặc ít hơn.
+    // Được sử dụng trong parser để parse payload gốc vào header stack này,
+    // mỗi phần tử chứa 1 byte của payload gốc.
+    // Cách này được sử dụng bởi nếu payload có kích thước nhỏ hơn 40 byte và được parse thẳng vào segment_payload_t,
+    // sẽ xảy ra lỗi PacketTooShort.
+
+    // Tác giả đã thử cách sử dụng varbit, song varbit bị hạn chế quá nhiều về khả năng thao tác
+    // (chỉ tính toán với các varbit khác, không thể lưu trong register, không thể shift)
+
+    joined_payload_t joined_payload;
+    
+    segment_payload_t[MAX_SEGMENTS_PER_BATCH] agg_segments; // Header stack này chứa tối đa 13 phần tử, nhằm lưu các segment
+    // cũng như các thông tin liên quan đến segment (độ dài thực tế).
+    // Header này sẽ được sử dụng ở giai đoạn egress. Dữ liệu của batch sẽ được sao chép từ register sang các phần tử của header này.
+    // Để kích hoạt các phần tử của header stack này, cần phải gọi phương thức .setValid() cho từng phần tử,
+    // đồng thời gán dữ liệu tương ứng cho từng phần tử.
 }
 
 struct metadata {
     bit<6> aggCount;
     bit<1> toggleSendAgg;
     bool dstMacChanged;
-    bit<16> segLen;
-    data_t payload_data;
+    bit<16> segLen; // độ dài thực tế của payload gốc, được parser lưu vào metadata để sử dụng trong quá trình tổng hợp.
+    data_t payload_data; // Được sử dụng trong parser như vùng đệm
+    // để ghép các byte của payload được parse vào stack bytechunk_payload_t[]
+    // thành một khối dữ liệu dạng data_t trước khi đẩy vào register
+    // Tác giả không lưu trực tiếp vào register vì không thể thao tác với register trong parser.
 }

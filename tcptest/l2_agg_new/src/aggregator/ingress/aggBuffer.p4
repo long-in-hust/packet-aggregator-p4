@@ -1,66 +1,106 @@
-action reset_batch(bit<1> param_actv_q) {
-    active_queue.write(0, param_actv_q ^ 1);
+// Hành động này sẽ được gọi trong aggregating() để đánh dấu batch mới được sử dụng để lưu gói tin,
+// đồng thời đánh dấu batch cũ đã sẵn sàng để được ghép vào gói tin hiện tại và gửi đi.
 
-    current_batch_count.read(mta.aggCount, (bit<32>)param_actv_q); // get the count of segments in the batch to be sent (now inactive)
-    current_batch_count.write((bit<32>)param_actv_q, 0); // reset batch count
-    mta.toggleSendAgg = 1; // set metadata to indicate batch is ready to send
+// Tham số dạng "inout" kết hợp khả năng của cả "in" (sao chép giá trị đối số truyền vào)
+// và "out" (cho phép truyền giá trị đã thay đổi ra ngoài sau khi thực hiện action).
+action reset_batch(inout bit<1> param_actv_q, in bit<8> flow_id) {
+    // Trước khi đặt lại số segment trong của batch đang hoạt động về 0,
+    // cần đọc số segment đã có trong batch đó vào mta.aggCount để có thể gán vào header aggmeta khi tạo gói tin tổng hợp.
+    // Các phương thức read và write của register đều yêu cầu tham số chỉ số có kiểu bit<32>,
+    // nên cần cast param_actv_q sang bit<32>.
+    current_batch_count.read(mta.aggCount, (bit<32>)param_actv_q);
+    // Đặt lại số segment về 0
+    // viết vào thanh ghi current_batch_count tại chỉ số là chỉ số của batch đang hoạt động.
+    current_batch_count.write((bit<32>)param_actv_q, 0);
+    // Chuyển chỉ số batch đang hoạt động sang batch còn lại
+    // Vì biến 1 bit nên có thể XOR với 1 để chuyển đổi giữa 0 và 1
+    param_actv_q = param_actv_q ^ 1;
+    // Ghi chỉ số mới vào active_batch để cập nhật batch đang hoạt động
+    active_batch.write(0, param_actv_q);
+    // Ghi FlowID vào register current_flow_id tại chỉ số là chỉ số của batch đang hoạt động
+    // Batch m đang tổng hợp cho flow id m
+    current_flow_id.write((bit<32>)param_actv_q, flow_id);
+    // đánh dấu batch cũ đã sẵn sàng để ghép vào gói tin hiện tại và gửi đi
+    mta.toggleSendAgg = 1;
 }
 
-action aggregateSaveBuffer(bit<1> param_actv_q, bit<6> param_current_count) {
-    // write data
-    bit<32> write_index = (bit<32>)param_actv_q * LOG_QUEUE_MAX_ALLOC_ELEMENTS + (bit<32>)param_current_count;
+// Hành động này sẽ được gọi trong aggregating() để lưu dữ liệu payload của segment vào data_queues.
+// Tham số param_current_count là số segment đã có trong batch đang hoạt động
+// được dùng để tính chỉ số phần tử trong data_queues để ghi dữ liệu, cũng như sẽ được cập nhật tăng lên 1 sau khi ghi.
+// Tham số truyền vào với định hướng "in" sao chép giá trị đối số truyền vào,
+// nhưng không cho phép thay đổi và truyền sự thay đổi ngược ra ngoài.
+// Việc này không cần thiết vì giá trị mới sẽ được ghi vào register.
+action aggregateSaveBuffer(in bit<6> param_current_count, in bit<1> param_actv_q) {
+    // Tính chỉ số phần tử trong data_queue để ghi dữ liệu theo công thức:
+    // chỉ số trong data_queue = chỉ số batch đang hoạt động * số segment tối đa mỗi batch + số segment đã có trong batch đó
+    bit<32> write_index = (bit<32>)param_actv_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)param_current_count;
+    // Ghi dữ liệu payload vào data_queues tại chỉ số write_index
     data_queues.write(write_index, mta.payload_data);
-
-    bit<6> count = param_current_count + 1;
-    current_batch_count.write((bit<32>)param_actv_q, (bit<6>)count);
+    // Ghi địa chỉ MAC nguồn của segment vào segment_src_macs tại cùng chỉ số write_index
+    segment_src_macs.write(write_index, hdr.ethernet.srcAddr);
+    // Tăng số segment đã có trong batch đó lên 1
+    current_batch_count.write((bit<32>)param_actv_q, (bit<6>)(param_current_count + 1));
 }
 
-action aggregating() {
-    // get active queue
+// Hành động đầu vào cho luồng tổng hợp gói tin. Hành động này sẽ xét các điều kiện để quyết định việc tiếp tục
+// lưu gói tin vào batch hiện tại hay là tạo gói tin tổng hợp mới từ batch đã đầy và chuyển sang batch còn lại để lưu gói tin tiếp theo.
+action aggregating(bit<8> flow_id) {
+    // Lấy chỉ số batch đang hoạt động từ register active_batch
     bit<1> active_q;
-    active_queue.read(active_q, 0);
+    active_batch.read(active_q, 0);
     
+    // Lấy số segment đã có trong batch đang hoạt động từ register current_batch_count
+    // chỉ số được lấy theo theo chỉ số batch đang hoạt động
     bit<6> count;
     current_batch_count.read(count, (bit<32>)active_q);
 
-    // get last destination MAC from register
+    // Lấy địa chỉ MAC đích của gói tin liền trước để so sánh với địa chỉ MAC đích của gói hiện tại
+    // Do phương thức read của register trả về kiểu void, giá trị đọc không được trả về trực tiếp
+    // mà được truyền lại ra ngoài qua tham số thứ nhất, nên không thể so sánh trực tiếp.
+    // Cần gán vào một biến tạm như last_dest_mac để so sánh.
     macAddr_t last_dest_mac;
     last_dst_addr.read(last_dest_mac, 0);
     
+    
     if (hdr.ethernet.dstAddr != last_dest_mac
-        || (bit<32>)count * 39 >= MAX_BATCH_SIZE_BYTES - std_meta.packet_length
-        || count == LOG_QUEUE_MAX_ALLOC_ELEMENTS - 1) 
+        || count == MAX_SEGMENTS_PER_BATCH)
     {
+        // Nếu địa chỉ MAC đích của gói tin hiện tại khác với địa chỉ MAC đích của gói tin liền trước,
+        // hoặc số segment đã có trong batch đang hoạt động đã đạt giới hạn tối đa,
+        // tiến hành đánh dấu sẵn sàng tổng hợp và reset batch cũ,
+        // chuyển chỉ số batch đang hoạt động sang batch còn lại, và lưu gói tin vào batch mới.
+
+        // cập nhật lại địa chỉ MAC đích gần nhất thành địa chỉ MAC đích của gói tin hiện tại (vì đã sang batch mới)
+        // Cập nhật vào thanh ghi để các gói sau có thể đọc được và so sánh với địa chỉ MAC đích của chúng.
         last_dst_addr.write(0, hdr.ethernet.dstAddr);
-        hdr.ethernet.dstAddr = last_dest_mac; // Yeah, this is basically a swap.
-        // Why swapping ?
-        // It's because this header will be used for the aggregated packet
-        // while its payload will be saved into the other queue.
-        // Ponzi scheme moment !
-        reset_batch(active_q);
-        aggregateSaveBuffer(active_q ^ 1, 0);
+
+        // Vì gói tin tổng hợp sẽ mang thông tin địa chỉ MAC đích
+        // của các gói tin trong batch cũ (các gói tin tính đến gói liền trước),
+        // cần ghi địa chỉ MAC đích của gói tin liền trước cho header Ethernet
+        // Điều này có thể thực hiện dược nhờ lưu địa chỉ MAC đích cũ vào biến tạm last_dest_mac.
+        // (tương tự việc thực hiện hoán đổi 2 biến thông qua một biến trung gian)
+        hdr.ethernet.dstAddr = last_dest_mac;
+        // Hành động reset batch cũng sẽ cập nhật lại biến active_q sang batch mới
+        reset_batch(active_q, flow_id);
+        // Sau khi reset và chuyển sang batch mới, lưu gói tin hiện tại vào batch mới này
+        aggregateSaveBuffer(0, active_q);
+        // Chúng ta không drop vì header của gói tin này sẽ được dùng làm khung để dựng gói tin tổng hợp.
     } else {
-        aggregateSaveBuffer(active_q, count);
-        drop(); // Why drop if the dst_mac is the same as the last ?
-            // Because the header is being unused
-            // If the dst_mac is different, it means
-            // the header is holding the value of the real last destination MAC due to the swap,
-            // which means that header is going to be assembled with the previously aggregated payload.
+        // Ngược lại, nếu chưa đạt giới hạn và địa chỉ MAC đích vẫn giống nhau, tiếp tục lưu payload của gói tin vào batch hiện tại.
+        aggregateSaveBuffer(count, active_q);
+        // Sau khi lưu payload vào register data_queues, vì gói tin không được sử dụng nữa, cần drop để không gửi ra ngoài cũng như tránh chiếm dụng tài nguyên.
+        drop();
     }
 }
 
-action append_normal_payload() {
-    hdr.parsed_payload[0].setValid();
-    hdr.parsed_payload[0].data = mta.payload_data;
-}
-
+// Địa chỉ sẽ được truyền vào bảng qua API từ control plane.
 table tbl_aggregation {
     key = {
         hdr.ethernet.dstAddr: exact;
     }
     actions = {
         aggregating;
-        append_normal_payload;
+        NoAction;
     }
-    default_action = append_normal_payload();
+    default_action = NoAction();
 }

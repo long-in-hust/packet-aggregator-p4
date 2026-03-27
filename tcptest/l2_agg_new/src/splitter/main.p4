@@ -10,10 +10,11 @@ parser pkt_parser(packet_in pkt, out headers hdr,
                       inout metadata mta, inout standard_metadata_t std_meta) {
     state start {
         pkt.extract(hdr.ethernet);
+        // Do áp dụng recirculate nên cần kiểm tra thêm cho gói tin IPv4 (sẽ giải thích ở dưới)
         transition select(hdr.ethernet.etherType) {
             EtherType.ARP:  parse_arp;
-            EtherType.L3AGG: parse_l3agg;
-            EtherType.IPV4: check_ipv4;
+            EtherType.L3AGG: parse_l3agg; // Parse gói tin tổng hợp được gửi từ agg switch
+            EtherType.IPV4: check_ipv4; // Kiểm tra một số thông tin cho gói tin  IPv4
             default:        accept;
         }
     }
@@ -25,20 +26,38 @@ parser pkt_parser(packet_in pkt, out headers hdr,
 
     state parse_l3agg {
         pkt.extract(hdr.aggmeta);
+        // Lấy số segment còn lại để chuẩn bị parse payload
         mta.segCountRemaining = hdr.aggmeta.segCount;
-        transition parse_payloads;
+        transition select (mta.segCountRemaining) {
+            0: accept;
+            default: parse_payloads; // Độ dài phải lớn hơn 0 mới có payload để parse
+        }
     }
 
     state check_ipv4{
-        mta.segCountRemaining = 1;
-        transition select (mta.resubmitted) {
-            true: parse_payloads;
+        // Điều kiện: gói tin được tái lưu hành và không phải clone
+
+        // Nếu đây không phải gói tin được recirculate từ egress,
+        // nó chỉ là gói IPv4 bình thường, không cần parse gì thêm, chỉ cần chuyển tiếp như gói tin bình thường.
+        // Ngược lại, gói tin IPv4 được recirculate là để tái sử dụng phần header
+        // và gắn vào segment tiếp theo trước khi gửi ra.
+        // Do đó cần parse payload của frame ethernet này để thay bằng segment tiếp theo.
+        transition select (mta.recirculated) {
+            true: parse_ipv4;
             default: accept;
         }
     }
 
+    state parse_ipv4 {
+        // Parse payload của frame ethernet để thay bằng segment tiếp theo
+        pkt.extract(hdr.recovered_payload);
+        transition accept;
+    }
+
+    // Kết hợp header_stack.next và transition vào chính trạng thái hiện hành
+    // để triển khai vòng lặp mà không cần ghi cụ thể số lần.
     state parse_payloads {
-        pkt.extract(hdr.payload.next);
+        pkt.extract(hdr.segments.next);
         mta.segCountRemaining = mta.segCountRemaining - 1;
         transition select(mta.segCountRemaining) {
             0: accept;
@@ -49,17 +68,19 @@ parser pkt_parser(packet_in pkt, out headers hdr,
 
 control checksum_verifier(inout headers hdr, inout metadata mta) {
     apply {
-        // Will leave it empty for now
+        // Tạm bỏ qua và chưa xét đến bước này
     }
 }
 
 control sw_ingress(inout headers hdr, inout metadata mta,
                 inout standard_metadata_t std_meta) {
-    // default drop action
+    // Hành động drop() phải được định nghĩa vì mark_to_drop() là một hàm extern, không thể được gọi từ trong bảng.
+    // Bảng ARP và bảng forwar sẽ dùng drop như hành động mặc định nếu không khớp với mục nào.
     action drop() {
         mark_to_drop(std_meta);
     }
     
+    // Include file p4 khác vì mã nguồn dài và cần được chia nhỏ để dễ đọc và tác động hơn.
     #include "ingress/splitBuffer.p4"
     #include "ingress/L2Actions.p4"
 
@@ -67,16 +88,22 @@ control sw_ingress(inout headers hdr, inout metadata mta,
         if (hdr.ethernet.isValid())
         {
             if (hdr.ethernet.etherType == EtherType.ARP && hdr.arp.isValid()) {
+                // Không áp dụng trích segment cho các gói ARP
+                // Áp dụng bảng học ARP để phân giải IPv4 sang MAC và báo về host nguồn.
                 arp_learning.apply();
             }
             else {
-                if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid() && !mta.resubmitted) {
+                if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
+                    // Trích các segment từ payload nếu đó là gói tổng hợp hợp lệ
                     save_buffer();
                 }
+                // Chuyển tiếp Layer 2 như gói tin bình thường nếu header ethernet hợp lệ
+                // và không phải ARP (cần gửi ra đúng cồng đi vào).
                 eth_forward.apply();
             }
         }
         else {
+            // Bỏ gói tin không có header Ethernet hợp lệ
             drop();
         }
     }
@@ -84,7 +111,8 @@ control sw_ingress(inout headers hdr, inout metadata mta,
 
 control sw_egress(inout headers hdr, inout metadata mta,
                inout standard_metadata_t std_meta) {
-                // default drop action
+    
+    // hành động này là một thủ tục, không thực hiện ngay mà sẽ được gọi trong khối apply
     action drop() {
         mark_to_drop(std_meta);
     }
@@ -94,11 +122,35 @@ control sw_egress(inout headers hdr, inout metadata mta,
     apply {
         if (hdr.ethernet.isValid())
         {
-            if ((hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) || mta.resubmitted) {
+            // Nếu đây là gói tin clone, thì nó vẫn chưa được điều chỉnh cổng ra
+            // và theo clone session, sẽ được gửi ra một cổng cố định, cổng đó có thể không đúng với
+            // cổng để tới đích của gói tin. Do đó, cần tái lưu thông để nạp lại vào bảng chuyển tiếp.
+
+            // Tuy nhiên, vì gói tin clone này đã được gắn payload cần thiết,
+            // nên sau khi tái lưu thông và định tuyến có thể gửi đi ngay mà không cần sửa thêm.
+            // Do đó, có thể đặt lại thông tin metadata cho giống gói tin IPv4 thông thường.
+            if (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
+                // mặc dù được recirculate, nhưng đánh false để được xem như gói tin thường
+                mta.recirculated = false;
+                // đánh lại instance_type về 0 để xem như gói tin thường và bỏ qua điều kiện này
+                std_meta.instance_type = 0;
+                recirculate_preserving_field_list(1);
+                return;
+            }
+
+            // Dùng header để dụng thành thành gói tin ban đầu nếu đạt một trong 2 điều kiện:
+            // 1: hdr.ethernet.etherType == EtherType.L3AGG -> đây là header của gói tin tổng hợp
+            // Vì payload đã được trích ra và lưu ở control ingress, có thể tận dụng header này
+            // để gán segment và dựng thành gói tin ban đầu.
+
+            // 2: mta.recirculated == true -> đây là gói tin được tái lưu thông với mục đích
+            // chuẩn bị gắn segment tiếp theo vào payload và gửi đi.
+            if ((hdr.ethernet.etherType == EtherType.L3AGG) || mta.recirculated) {
                 formSegPacket();
             }
         }
         else {
+            // loại bỏ gói tin không hợp lệ
             drop();
         }
     }
@@ -114,7 +166,7 @@ control sw_deparser(packet_out pkt, in headers hdr) {
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.arp);
         pkt.emit(hdr.aggmeta);
-        pkt.emit(hdr.payload[0]);
+        pkt.emit(hdr.recovered_payload);
     }
 }
 

@@ -26,19 +26,21 @@ def writeArpRules(p4info_helper, sw, arp_request_ip, arp_reply_mac):
             },
             action_name="sw_ingress.mac_resolve",
             action_params={
-                "dst_mac":arp_reply_mac,
+                "resolved_mac":arp_reply_mac,
             })
     sw.WriteTableEntry(table_entry)
     print("Install ARP rule into switch %s" % sw.name)
 
-def writeAggBufferRules(p4info_helper, sw, dst_mac):
+def writeAggBufferRules(p4info_helper, sw, dst_mac, flow_id):
     table_entry = p4info_helper.buildTableEntry(
             table_name="sw_ingress.tbl_aggregation",
             match_fields={
                 "hdr.ethernet.dstAddr":dst_mac
             },
             action_name="sw_ingress.aggregating",
-            action_params={}
+            action_params={
+                "flow_id": flow_id
+            }
         )
     sw.WriteTableEntry(table_entry)
     print("Install Buffer rule into switch %s" % sw.name)
@@ -97,8 +99,8 @@ def main(p4info_file_path, bmv2_file_path):
         writeForwardingRules(p4info_helper, sw=s1, dst_mac=mac, out_port=switch_port['s1'][mac])
         
     # Aggregation buffer rules
-    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03')
-    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04')
+    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:02', flow_id=0)
+    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03', flow_id=1)
 
     # Egress rules
     # For aggregated packets

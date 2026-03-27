@@ -16,9 +16,13 @@ compiled_json := $(P4_FILES:%.p4=$(BUILD_DIR)/%.json)
 
 all: build load_ctrl_plane
 
+run_grpc:
+	@echo "Running L2 Aggregator..."
+	cd mininet ; sudo ./run_emu.py -b simple_switch_grpc
+
 run:
 	@echo "Running L2 Aggregator..."
-	cd mininet ; sudo ./run_emu.py
+	cd mininet ; sudo ./run_emu.py -j ../$(BUILD_DIR)/l2_aggregate.json,../$(BUILD_DIR)/l2_split.json -b simple_switch
 
 build_aggregator:	dirs $(compiled_json)
 	@echo "---------------------------------"

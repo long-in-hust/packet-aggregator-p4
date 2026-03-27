@@ -32,7 +32,7 @@ def writeArpRules(p4info_helper, sw, arp_request_ip, arp_reply_mac):
             },
             action_name="sw_ingress.mac_resolve",
             action_params={
-                "dst_mac":arp_reply_mac,
+                "resolved_mac":arp_reply_mac,
             })
     sw.WriteTableEntry(table_entry)
     print("Install ARP rule into switch %s" % sw.name)
@@ -107,10 +107,14 @@ def main(p4info_file_path, bmv2_file_path):
         writeForwardingRules(p4info_helper, sw=s2, dst_mac=mac, out_port=switch_port['s2'][mac])
     
     # Create clone session on s2
-    replicas = [
-        {'egress_port':switch_port['s2']['00:00:00:00:00:03'], 'instance':1}
+    replicas1 = [
+        {'egress_port':500, 'instance':1}
     ]
-    createCloneSession(s2, session_id=1, replicas=replicas)
+    # replicas2 = [
+    #     {'egress_port':switch_port['s2']['00:00:00:00:00:02'], 'instance':1}
+    # ]
+    createCloneSession(s2, session_id=1, replicas=replicas1)
+    # createCloneSession(s2, session_id=2, replicas=replicas2)
 
     # Read table entries to check changes
     readTableRules(p4info_helper, s2)

@@ -1,42 +1,22 @@
-/*
-    Why did I unroll the loop and write APPEND_SEGMENT almost 30 times instead of just doing a for loop from 0 to LOG_QUEUE_MAX_ALLOC_ELEMENTS-1 and calling APPEND_PAYLOAD(i) in the loop body ?
-    Well, P4 never allow loops ! The APPEND_PAYLOAD macro is to make it look shorter, else it would look 8 times longer than what you see.
-
-    Also, the else part with return is to avoid unnecessary iterations once all segments have been appended. Since we are decrementing mta.aggCount with each appended segment, once it reaches 0, we can stop appending and just set the EtherType and return the packet.
-*/
-
+// Phương thức push_front sẽ dịch con trỏ đầu stack lên trước 1 phần tử, tạo một phần tử mới ở đầu stack,
+// và đẩy tất cả phần tử đã có lên sau phần tử mới này.
+// Sử dụng phương pháp push_front sẽ không phải quá quan tâm về chỉ số, vì phần tử mới luôn ở đầu stack (chỉ số bằng 0)
+// Thứ tự của các segment vẫn giữ nguyên vì lấy từ cuối stack - chỉ số tính theo công thức:
+// chỉ số batch không hoạt động * số segment tối đa mỗi batch + số segment đã có trong batch đó - 1 (vì chỉ số bắt đầu từ 0)
 #define APPEND_SEGMENT                     \
     if (mta.aggCount > 0) {                           \
-        index = (bit<32>)inactive_q * LOG_QUEUE_MAX_ALLOC_ELEMENTS + (bit<32>)mta.aggCount - 1;  \
-        data_queues.read(segment_data, index);  \
-        hdr.parsed_payload.push_front(1);   \
-        hdr.original_payload.pop_front(40);  \
-        hdr.parsed_payload[0].setValid();    \
-        hdr.parsed_payload[0].data = segment_data;   \
+        hdr.agg_segments.push_front(1);   \
+        hdr.agg_segments[0].setValid();    \
+        index = (bit<32>)inactive_q * MAX_SEGMENTS_PER_BATCH + (bit<32>)mta.aggCount - 1;  \
+        data_queues.read(hdr.agg_segments[0].data, index);  \
+        segment_src_macs.read(hdr.agg_segments[0].src_mac, index);  \
         mta.aggCount = mta.aggCount - 1;   \
     }   \
     else {  \
-         \
         return; \
     }
 
 #define APPEND_PAYLOAD \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
-    APPEND_SEGMENT \
     APPEND_SEGMENT \
     APPEND_SEGMENT \
     APPEND_SEGMENT \
