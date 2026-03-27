@@ -35,6 +35,15 @@ register<data_t>((bit<32>)MAX_SEGMENT_NUMBER)    data_queue;
 // Chỉ số phần tử cũng tương tự register data_queues
 register<macAddr_t>((bit<32>)MAX_SEGMENT_NUMBER) segment_src_macs;
 
+// Register này lưu chỉ số flow tổng hợp (flow_id) của từng segment tương ứng được lưu trong data_queues
+// Thực ra các segment trong cùng gói tổng hợp sẽ có cùng một flow_id,
+// nhưng việc phải tính toán số lượng gói tin cho từng flow và ở vị trí nào về cơ bản phức tạp hơn so với
+// việc lưu flow_id cụ thể cho từng segment.
+register<bit<8>>((bit<32>)MAX_SEGMENT_NUMBER) segment_flow_ids;
+
+// Register lưu địa chỉ MAC đích cho từng flow_id, được dùng khi khôi phục lại gói tin gốc để gửi đi.
+register<macAddr_t>(16) flow_dst_macs;
+
 // Lưu trữ số lượng segment đã được lưu trong register data_queue.
 // Vì chỉ có một register, một không gian lưu trữ chung cho tất cả các segment,
 // biến đếm này chỉ cần một phần tử duy nhất.

@@ -16,6 +16,7 @@
     if (mta.aggCount > 0) {                           \
         data_queue.write((bit<32>)current_tail, hdr.segments[0].data);     \
         segment_src_macs.write((bit<32>)current_tail, hdr.segments[0].src_mac);     \
+        segment_flow_ids.write((bit<32>)current_tail, hdr.aggmeta.flow_id);     \
         current_count = current_count + 1;     \
         count_variable.write(0, current_count);     \
         current_tail = (current_tail + 1) % MAX_SEGMENT_NUMBER;     \

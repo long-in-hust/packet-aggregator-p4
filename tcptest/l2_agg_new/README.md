@@ -36,12 +36,12 @@
         - [x] Gắn flow ID vào aggmeta cho cấu trúc payload của gói tin tương ứng với địa chỉ MAC đích
         - [x] Tạo register với 2 phần tử chứa FlowID cho 2 batch
         - [x] Tạo một bảng đối chiếu giữa MAC đích và FlowID
-        - [ ] Viết lại chương trình control plane để nạp tham số FlowID
+        - [x] Chỉnh lại chương trình control plane để nạp tham số FlowID
     - [ ] Split switch:
         - [x] Gắn flow ID vào aggmeta cho cấu trúc payload của gói tin tương ứng với địa chỉ MAC đích
-        - [ ] Tạo thêm một register đóng vai trò như bảng đối chiếu giữa FlowID (chỉ số) và MAC đích (giá trị)
-            - [ ] Dựng đoạn mã ghi vào register
-        - [o] Tạo clone session riêng cho từng flow với cổng ra tương ứng
+        - [x] Tạo thêm một register đóng vai trò như bảng đối chiếu giữa FlowID (chỉ số) và MAC đích (giá trị)
+            - [x] Dựng đoạn mã ghi vào register
+        - [o] Tạo clone session riêng cho từng flow với cổng ra tương ứng -> có thể bỏ
         - [ ] Recirculate lại gói tin clone để forward lại
 
 - [ ] Viết lại các lệnh gọi control plane bằng lệnh simple_switch_cli và giải thích được ý nghĩa
