@@ -213,7 +213,8 @@ control sw_deparser(packet_out pkt, in headers hdr) {
 }
 
 /*
-------- Instantiate the switch --------
+Khởi tạo một đối tượng Package tên V1Switch.
+Dùng để áp dụng kiến trúc switch đã được định nghĩa trong file v1model.p4.
 */
 
 V1Switch(
