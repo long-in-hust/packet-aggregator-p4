@@ -100,7 +100,7 @@ def main(p4info_file_path, bmv2_file_path):
         
     # Aggregation buffer rules
     writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:03', flow_id=0)
-    # writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', flow_id=1)
+    writeAggBufferRules(p4info_helper, sw=s1, dst_mac='00:00:00:00:00:04', flow_id=1)
 
     # Egress rules
     # For aggregated packets
