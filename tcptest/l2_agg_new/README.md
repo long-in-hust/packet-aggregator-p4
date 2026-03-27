@@ -11,7 +11,7 @@
 - [o] Cân nhắc viết lại chương trình control plane hoặc chuyển sang sử dụng thrift server (cần tìm hiểu)
 - [x] Viết lại mininet sử dụng simple switch không tích hợp GRPC
 
-- [ ] Thêm giới hạn thời gian cho việc tổng hợp (tạm thời xác định là 0.2 giây)
+- [x] Thêm giới hạn thời gian cho việc tổng hợp (tạm thời xác định là 0.2 giây)
 
 ### Một số lỗi:
 - **(2026/03/27 11:17)** Lỗi khi tổng hợp gói tin tới địa chỉ đích 00:00:00:00:00:02 -> Lỗi từ s1 (switch tổng hợp)
