@@ -85,6 +85,7 @@ header recovered_payload_t {
 }
 
 header aggmeta_t {
+    bit<8> flow_id; // Chỉ số flow tổng hợp, một flow tương ứng với 1 địa chỉ đích.
     bit<8> segCount;
 }
 

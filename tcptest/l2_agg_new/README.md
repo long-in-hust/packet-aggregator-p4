@@ -33,11 +33,13 @@
 
 - [ ] Tổng hợp các gói tin khác đích (nhiều flow):
     - [ ] Agg switch:
-        - [ ] Gắn flow ID vào aggmeta cho cấu trúc payload của gói tin tương ứng với địa chỉ MAC đích
+        - [x] Gắn flow ID vào aggmeta cho cấu trúc payload của gói tin tương ứng với địa chỉ MAC đích
+        - [ ] Tạo một bảng đối chiếu giữa MAC đích và FlowID
     - [ ] Split switch:
-        - [ ] Gắn flow ID vào aggmeta cho cấu trúc payload của gói tin tương ứng với địa chỉ MAC đích
-        - [ ] Tạo thêm một register chứa flow
-        - [ ] Tạo thêm một register đóng vai trò như bảng đối chiếu giữa ID (chỉ số) và MAC đích (giá trị)
-        - [ ] Tạo clone session riêng cho từng flow với cổng ra tương ứng
+        - [x] Gắn flow ID vào aggmeta cho cấu trúc payload của gói tin tương ứng với địa chỉ MAC đích
+        - [ ] Tạo thêm một register đóng vai trò như bảng đối chiếu giữa FlowID (chỉ số) và MAC đích (giá trị)
+            - [ ] Dựng đoạn mã ghi vào register
+        - [o] Tạo clone session riêng cho từng flow với cổng ra tương ứng
+        - [ ] Recirculate lại gói tin clone để forward lại
 
 - [ ] Viết lại các lệnh gọi control plane bằng lệnh simple_switch_cli và giải thích được ý nghĩa
