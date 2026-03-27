@@ -35,6 +35,8 @@ parser pkt_parser(packet_in pkt, out headers hdr,
     }
 
     state check_ipv4{
+        // Điều kiện: gói tin được tái lưu hành và không phải clone
+
         // Nếu đây không phải gói tin được recirculate từ egress,
         // nó chỉ là gói IPv4 bình thường, không cần parse gì thêm, chỉ cần chuyển tiếp như gói tin bình thường.
         // Ngược lại, gói tin IPv4 được recirculate là để tái sử dụng phần header
@@ -120,10 +122,19 @@ control sw_egress(inout headers hdr, inout metadata mta,
     apply {
         if (hdr.ethernet.isValid())
         {
-            // Nếu đây là gói tin clone, kết thúc ngay control,
-            // Lý do là gói tin này đã được gắn sẵn payload cần thiết để gửi đi.
-            // Lý do clone sẽ được giải thích ở trong file egress/sendSplitPkt.p4, ở cuối action formSegPacket().
+            // Nếu đây là gói tin clone, thì nó vẫn chưa được điều chỉnh cổng ra
+            // và theo clone session, sẽ được gửi ra một cổng cố định, cổng đó có thể không đúng với
+            // cổng để tới đích của gói tin. Do đó, cần tái lưu thông để nạp lại vào bảng chuyển tiếp.
+
+            // Tuy nhiên, vì gói tin clone này đã được gắn payload cần thiết,
+            // nên sau khi tái lưu thông và định tuyến có thể gửi đi ngay mà không cần sửa thêm.
+            // Do đó, có thể đặt lại thông tin metadata cho giống gói tin IPv4 thông thường.
             if (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
+                // mặc dù được recirculate, nhưng đánh false để được xem như gói tin thường
+                mta.recirculated = false;
+                // đánh lại instance_type về 0 để xem như gói tin thường và bỏ qua điều kiện này
+                std_meta.instance_type = 0;
+                recirculate_preserving_field_list(1);
                 return;
             }
 

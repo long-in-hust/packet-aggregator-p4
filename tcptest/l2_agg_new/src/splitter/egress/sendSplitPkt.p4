@@ -31,7 +31,11 @@ action formSegPacket() {
         // Tại vị trí tương tự trong register segment_src_macs cũng lưu địa chỉ MAC nguồn của segment,
         // đọc và gắn vào trường srcAddr của header ethernet để khôi phục lại gói tin gốc.
         segment_src_macs.read(hdr.ethernet.srcAddr, (bit<32>)current_head);
-
+        // Đọc flow_id của segment từ register segment_flow_ids
+        bit<8> curr_seg_flow_id;
+        segment_flow_ids.read(curr_seg_flow_id, (bit<32>)current_head);
+        // Dùng flow của id hiện tại làm chỉ số để tra địa chỉ MAC đích tương ứng từ register flow_dst_macs
+        flow_dst_macs.read(hdr.ethernet.dstAddr, (bit<32>)curr_seg_flow_id);
         // Nâng chỉ số đầu của "hàng đợi" lên 1, cập nhật lại vào register head_tail_index để lấy ở segment tiếp theo trong lần sau.
         current_head = (current_head + 1) % MAX_SEGMENT_NUMBER;
         head_tail_index.write(0, current_head);
