@@ -1,4 +1,11 @@
 action formAggPacket() {
+    // 40 phần tử byte này đã được nối lại thành 1 segment và ghi vào data_queues trong action aggregateSaveBuffer,
+    // nên sẽ không còn được sử dụng nữa. Do đó cần khử chúng khỏi header stack để giảm chiếm dụng phần native buffer được BMv2 cấp
+    // cho gói tin (độ dài gốc + 512 byte), cũng như tránh dư thừa/sai lệch thông tin khi gửi gói tin đi.
+    // Phương thức pop_front với đối số 40 sẽ dịch con trỏ đầu stack lùi về 40 phần tử
+    // và đánh dấu 40 phần tử này là inValid (không hợp lệ/không tồn tại).
+    hdr.original_payload.pop_front(40);
+
     bit<1> inactive_q;
     bit<32> index;
 
@@ -15,8 +22,10 @@ action formAggPacket() {
         current_flow_id.read(hdr.aggmeta.flow_id, (bit<32>)inactive_q);
         hdr.ethernet.etherType = EtherType.L3AGG; // đặt EtherType để nhận biết gói tin tổng hợp
         hdr.ethernet.srcAddr = DEVICE_MAC; // giữ nguyên địa chỉ MAC nguồn
+        APPEND_PAYLOAD
+    } else {
+        hdr.joined_payload.setValid();
+        index = (bit<32>)inactive_q * MAX_SEGMENTS_PER_BATCH; // chỉ lấy phần tử đầu tiên của batch con lại vì chỉ có 1 segment
+        data_queues.read(hdr.joined_payload.data, index);
     }
-
-    APPEND_PAYLOAD
-
 }

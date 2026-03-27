@@ -112,6 +112,12 @@ header segment_payload_t {
     // Lúc này các bit 0 sẽ được để trước hoặc sau dữ liệu thật
 }
 
+// Đây là cấu trúc lưu payload segment từ register, về cơ bản thì chỉ được dùng khi chỉ có 1 segment duy nhất để gắn vào gói tin,
+// nhằm phục dựng lại gói tin bình thường (vì 1 segment cũng không khác gì gói bình thường).
+header joined_payload_t {
+    data_t data;
+}
+
 header aggmeta_t {
     bit<8> flow_id; // Chỉ số flow tổng hợp, một flow tương ứng với 1 địa chỉ đích.
     // Số segment thực tế trong batch (tối đa 13)
@@ -148,8 +154,10 @@ struct headers {
 
     // Tác giả đã thử cách sử dụng varbit, song varbit bị hạn chế quá nhiều về khả năng thao tác
     // (chỉ tính toán với các varbit khác, không thể lưu trong register, không thể shift)
+
+    joined_payload_t joined_payload;
     
-    segment_payload_t[MAX_SEGMENTS_PER_BATCH] parsed_payload; // Header stack này chứa tối đa 13 phần tử, nhằm lưu các segment
+    segment_payload_t[MAX_SEGMENTS_PER_BATCH] agg_segments; // Header stack này chứa tối đa 13 phần tử, nhằm lưu các segment
     // cũng như các thông tin liên quan đến segment (độ dài thực tế).
     // Header này sẽ được sử dụng ở giai đoạn egress. Dữ liệu của batch sẽ được sao chép từ register sang các phần tử của header này.
     // Để kích hoạt các phần tử của header stack này, cần phải gọi phương thức .setValid() cho từng phần tử,
