@@ -48,6 +48,11 @@ register<bit<6>>(2) current_batch_count;
 // Lưu chỉ số của batch đang được sử dụng. Do chỉ có 2 batch nên 1 bit (2 giá trị) là đủ.
 register<bit<1>>(1) active_batch;
 
+// Lưu FlowID hiện tại đang được tổng hợp. FlowID sẽ được ghi vào aggmeta.flow_id của gói tin sau tổng hợp.
+// FlowID sẽ được gán dựa trên bảng ánh xạ giữa địa chỉ MAC đích và FlowID.
+// Có 2 phần tử tương ứng với 2 batch.
+register<bit<8>>(2) current_flow_id;
+
 // Register được dùng chung để lưu dữ liệu payload của các segment cho cả 2 batch. Số phần tử của register bằng:
 // số segment tối đa cho mỗi batch * số batch (13 * 2 = 26).
 // Chỉ số phần tử đầu tiên trong số các phần tử dành cho batch thứ n là n * MAX_SEGMENTS_PER_BATCH (n = 0 hoặc 1).

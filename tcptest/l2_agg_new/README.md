@@ -34,7 +34,9 @@
 - [ ] Tổng hợp các gói tin khác đích (nhiều flow):
     - [ ] Agg switch:
         - [x] Gắn flow ID vào aggmeta cho cấu trúc payload của gói tin tương ứng với địa chỉ MAC đích
-        - [ ] Tạo một bảng đối chiếu giữa MAC đích và FlowID
+        - [x] Tạo register với 2 phần tử chứa FlowID cho 2 batch
+        - [x] Tạo một bảng đối chiếu giữa MAC đích và FlowID
+        - [ ] Viết lại chương trình control plane để nạp tham số FlowID
     - [ ] Split switch:
         - [x] Gắn flow ID vào aggmeta cho cấu trúc payload của gói tin tương ứng với địa chỉ MAC đích
         - [ ] Tạo thêm một register đóng vai trò như bảng đối chiếu giữa FlowID (chỉ số) và MAC đích (giá trị)

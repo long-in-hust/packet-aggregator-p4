@@ -3,7 +3,7 @@
 
 // Tham số dạng "inout" kết hợp khả năng của cả "in" (sao chép giá trị đối số truyền vào)
 // và "out" (cho phép truyền giá trị đã thay đổi ra ngoài sau khi thực hiện action).
-action reset_batch(inout bit<1> param_actv_q) {
+action reset_batch(inout bit<1> param_actv_q, in bit<8> flow_id) {
     // Trước khi đặt lại số segment trong của batch đang hoạt động về 0,
     // cần đọc số segment đã có trong batch đó vào mta.aggCount để có thể gán vào header aggmeta khi tạo gói tin tổng hợp.
     // Các phương thức read và write của register đều yêu cầu tham số chỉ số có kiểu bit<32>,
@@ -17,6 +17,9 @@ action reset_batch(inout bit<1> param_actv_q) {
     param_actv_q = param_actv_q ^ 1;
     // Ghi chỉ số mới vào active_batch để cập nhật batch đang hoạt động
     active_batch.write(0, param_actv_q);
+    // Ghi FlowID vào register current_flow_id tại chỉ số là chỉ số của batch đang hoạt động
+    // Batch m đang tổng hợp cho flow id m
+    current_flow_id.write((bit<32>)param_actv_q, flow_id);
     // đánh dấu batch cũ đã sẵn sàng để ghép vào gói tin hiện tại và gửi đi
     mta.toggleSendAgg = 1;
 }
@@ -41,7 +44,7 @@ action aggregateSaveBuffer(in bit<6> param_current_count, in bit<1> param_actv_q
 
 // Hành động đầu vào cho luồng tổng hợp gói tin. Hành động này sẽ xét các điều kiện để quyết định việc tiếp tục
 // lưu gói tin vào batch hiện tại hay là tạo gói tin tổng hợp mới từ batch đã đầy và chuyển sang batch còn lại để lưu gói tin tiếp theo.
-action aggregating() {
+action aggregating(bit<8> flow_id) {
     // 40 phần tử byte này đã được sao chép vào mta.payload_data, và sẽ được ghi vào data_queues trong action aggregateSaveBuffer,
     // nên sẽ không còn được sử dụng nữa. Do đó cần khử chúng khỏi header stack để giảm chiếm dụng phần native buffer được BMv2 cấp
     // cho gói tin (độ dài gốc + 512 byte), cũng như tránh dư thừa/sai lệch thông tin khi gửi gói tin đi.
@@ -85,7 +88,7 @@ action aggregating() {
         // (tương tự việc thực hiện hoán đổi 2 biến thông qua một biến trung gian)
         hdr.ethernet.dstAddr = last_dest_mac;
         // Hành động reset batch cũng sẽ cập nhật lại biến active_q sang batch mới
-        reset_batch(active_q);
+        reset_batch(active_q, flow_id);
         // Sau khi reset và chuyển sang batch mới, lưu gói tin hiện tại vào batch mới này
         aggregateSaveBuffer(0, active_q);
         // Chúng ta không drop vì header của gói tin này sẽ được dùng làm khung để dựng gói tin tổng hợp.
