@@ -51,4 +51,9 @@
             - [x] Dựng đoạn mã ghi vào register
         - [x] Recirculate lại gói tin clone để forward lại
 
+- [x] Thêm giới hạn thời gian cho việc tổng hợp
+    - [x] Tạo 2 register, một cho thời gian gói đầu tiên của flow sau reset đi vào, 1 cho gói hiện tại.
+    - [x] Tìm hiểu đơn vị của standard_metadata.ingress_global_timestamp.
+    - [x] Viết điều kiện trong action.
+
 - [ ] Viết lại các lệnh gọi control plane bằng lệnh simple_switch_cli và giải thích được ý nghĩa

@@ -18,8 +18,10 @@ action reset_batch(inout bit<1> param_actv_q, in bit<8> flow_id) {
     // Ghi chỉ số mới vào active_batch để cập nhật batch đang hoạt động
     active_batch.write(0, param_actv_q);
     // Ghi FlowID vào register current_flow_id tại chỉ số là chỉ số của batch đang hoạt động
-    // Batch m đang tổng hợp cho flow id m
+    // Batch m đang tổng hợp cho flow id n
     current_flow_id.write((bit<32>)param_actv_q, flow_id);
+    // Sau khi reset, đây là gói tin đầu tiên của batch mới, nên cần ghi thời gian vào register
+    first_pkt_arrival.write(0, std_meta.ingress_global_timestamp);
     // đánh dấu batch cũ đã sẵn sàng để ghép vào gói tin hiện tại và gửi đi
     mta.toggleSendAgg = 1;
 }
@@ -60,13 +62,19 @@ action aggregating(bit<8> flow_id) {
     // Cần gán vào một biến tạm như last_dest_mac để so sánh.
     macAddr_t last_dest_mac;
     last_dst_addr.read(last_dest_mac, 0);
-    
-    
-    if (hdr.ethernet.dstAddr != last_dest_mac
-        || count == MAX_SEGMENTS_PER_BATCH)
-    {
+
+    // Lấy thời gian đến của gói đầu tiên trong batch từ register first_pkt_arrival,
+    // so sánh với thời gian của gói tin hiện tại
+    // Nếu thời gian lớn hơn ngưỡng (tạm đặt là 0.2s hoặc 200000 microsec),
+    // ngừng thêm gói tin vào batch hiện tại, đổi batch lưu segment và chuẩn bị tổng hợp cho batch vừa xong
+    timestamp_t first_pkt_time;
+    first_pkt_arrival.read(first_pkt_time, 0);
+
+    if (hdr.ethernet.dstAddr != last_dest_mac || count == MAX_SEGMENTS_PER_BATCH
+        || std_meta.ingress_global_timestamp - first_pkt_time >= MAX_WAIT_TIME) {
         // Nếu địa chỉ MAC đích của gói tin hiện tại khác với địa chỉ MAC đích của gói tin liền trước,
         // hoặc số segment đã có trong batch đang hoạt động đã đạt giới hạn tối đa,
+        // hoặc thời gian chờ đã vượt ngưỡng,
         // tiến hành đánh dấu sẵn sàng tổng hợp và reset batch cũ,
         // chuyển chỉ số batch đang hoạt động sang batch còn lại, và lưu gói tin vào batch mới.
 

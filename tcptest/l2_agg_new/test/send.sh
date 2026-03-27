@@ -16,5 +16,6 @@ while true; do
     echo "Sending packet ID: $pktid_str"
     echo "pktid: $pktid_str" | nc -u -w0 10.0.0.3 5000
     (((packet_id++)%10000))
-    sleep 0.01
+    sleep_time=$(((1 + RANDOM % 100) / 100))
+    sleep $sleep_time
 done

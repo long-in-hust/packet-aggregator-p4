@@ -3,7 +3,7 @@
 
 #define CPU_PORT 510
 #define DROP_PORT 511
-
+#define MAX_WAIT_TIME 200000 // 200000 microsec = 0.2s, ngưỡng thời gian chờ tối đa để tổng hợp batch
 #define DEVICE_MAC 0x0f0001000001
 
 #include "dataStructs.p4"

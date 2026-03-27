@@ -25,6 +25,8 @@ typedef bit<32> ip4Addr_t; // Định nghĩa kiểu dữ liệu địa chỉ IPv
 // Pipeline này không parse IPv4 nhưng sẽ parse ARP (có chứa địa chỉ IPv4)
 typedef bit<320> data_t; // Kiểu dữ liệu lưu payload của segment. Kích thước tối đa của dữ liệu này là 40 byte (320 bit).
 // Tác giả không dùng varbit vì kiểu dữ liệu này bị hạn chế rất nhiều về khả năng thao tác (sẽ giải thích chi tiết ở dưới).
+typedef bit<48> timestamp_t; // Kiểu dữ liệu lưu thời gian,
+// có kích thước 48 bit vì đó là kích thước của standard_metadata.ingress_global_timestamp trên v1model.
 
 /*
 ------ Registers ------
@@ -66,6 +68,9 @@ register<macAddr_t>(MAX_SEGMENTS_PER_BATCH * 2) segment_src_macs;
 // có tiếp tục tổng hợp hay không.
 // Do chỉ cần lưu giá trị của gói tin liền trước, 1 phần tử là đủ.
 register<macAddr_t>(1) last_dst_addr;
+
+// Register lưu thời gian đến switch của gói đầu tiên trong batch, sẽ được ghi mỗi lần reset batch.
+register<timestamp_t>(1) first_pkt_arrival;
 
 /* 
 ------- Define headers --------
