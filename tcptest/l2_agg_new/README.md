@@ -12,7 +12,7 @@
 - [x] Viết lại mininet sử dụng simple switch không tích hợp GRPC
 
 ### Một số lỗi:
-- **(2026/03/27)** Lỗi khi tổng hợp gói tin tới địa chỉ đích 00:00:00:00:00:02 -> Lỗi từ s1 (switch tổng hợp)
+- **(2026/03/27 11:17)** Lỗi khi tổng hợp gói tin tới địa chỉ đích 00:00:00:00:00:02 -> Lỗi từ s1 (switch tổng hợp)
     - Nguyên nhân: lỗi nằm ở việc kể cả khi chỉ có 1 segment, thử được gửi đi là frame ethernet với ethertype là IPv4, nhưng payload của frame đấy lại chứa thêm 6 bit đầu cho địa chỉ nguồn, gây sai lệch thông tin gói IPv4 khi switch tách đọc được (do cũng không phải EtherType cho gói tổng hợp với aggmeta tổng hợp để trích xuất segment và lấy dữ liệu).
     - Trạng thái: đã khắc phục.
     - Cách xử lý: Thêm một cấu trúc header gọi là parsed_payload để lưu phần dữ liệu của segment nếu chỉ có 1 segment duy nhất, cấu trúc này không chứa thông tin về nguồn gốc mà chỉ chứa dữ liệu đúng như khi được parse và lưu trong register. Gói tin gốc đã được khôi phục khi gắn vào và deparse.
