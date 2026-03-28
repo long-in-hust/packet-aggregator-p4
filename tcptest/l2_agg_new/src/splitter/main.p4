@@ -14,7 +14,7 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         transition select(hdr.ethernet.etherType) {
             EtherType.ARP:  parse_arp;
             EtherType.L3AGG: parse_l3agg; // Parse gói tin tổng hợp được gửi từ agg switch
-            EtherType.IPV4: check_ipv4; // Kiểm tra một số thông tin cho gói tin  IPv4
+            // EtherType.IPV4: check_ipv4; // Kiểm tra một số thông tin cho gói tin  IPv4
             default:        accept;
         }
     }
@@ -34,25 +34,25 @@ parser pkt_parser(packet_in pkt, out headers hdr,
         }
     }
 
-    state check_ipv4{
-        // Điều kiện: gói tin được tái lưu hành và không phải clone
+    // state check_ipv4{
+    //     // Điều kiện: gói tin được tái lưu hành và không phải clone
 
-        // Nếu đây không phải gói tin được recirculate từ egress,
-        // nó chỉ là gói IPv4 bình thường, không cần parse gì thêm, chỉ cần chuyển tiếp như gói tin bình thường.
-        // Ngược lại, gói tin IPv4 được recirculate là để tái sử dụng phần header
-        // và gắn vào segment tiếp theo trước khi gửi ra.
-        // Do đó cần parse payload của frame ethernet này để thay bằng segment tiếp theo.
-        transition select (mta.recirculated) {
-            true: parse_ipv4;
-            default: accept;
-        }
-    }
+    //     // Nếu đây không phải gói tin được recirculate từ egress,
+    //     // nó chỉ là gói IPv4 bình thường, không cần parse gì thêm, chỉ cần chuyển tiếp như gói tin bình thường.
+    //     // Ngược lại, gói tin IPv4 được recirculate là để tái sử dụng phần header
+    //     // và gắn vào segment tiếp theo trước khi gửi ra.
+    //     // Do đó cần parse payload của frame ethernet này để thay bằng segment tiếp theo.
+    //     transition select (mta.recirculated) {
+    //         true: parse_ipv4;
+    //         default: accept;
+    //     }
+    // }
 
-    state parse_ipv4 {
-        // Parse payload của frame ethernet để thay bằng segment tiếp theo
-        pkt.extract(hdr.recovered_payload);
-        transition accept;
-    }
+    // state parse_ipv4 {
+    //     // Parse payload của frame ethernet để thay bằng segment tiếp theo
+    //     pkt.extract(hdr.recovered_payload);
+    //     transition accept;
+    // }
 
     // Kết hợp header_stack.next và transition vào chính trạng thái hiện hành
     // để triển khai vòng lặp mà không cần ghi cụ thể số lần.
@@ -97,7 +97,13 @@ control sw_ingress(inout headers hdr, inout metadata mta,
                     // Trích các segment từ payload nếu đó là gói tổng hợp hợp lệ
                     save_buffer();
                 }
-                // Chuyển tiếp Layer 2 như gói tin bình thường nếu header ethernet hợp lệ
+                if (mta.recirculated) {
+                    // Đánh lại instance_type về 0 để
+                    // xem như gói tin thường và bỏ qua điều kiện nhận diện clone ở lần sau,
+                    // tránh bị lặp lại clone không cần thiết.
+                    std_meta.instance_type = 0;
+                }
+                // Chuyển tiếp Layer 2 như gói tin bình thường nếu header ethernet hợp lệ,
                 // và không phải ARP (cần gửi ra đúng cồng đi vào).
                 eth_forward.apply();
             }
@@ -122,22 +128,6 @@ control sw_egress(inout headers hdr, inout metadata mta,
     apply {
         if (hdr.ethernet.isValid())
         {
-            // Nếu đây là gói tin clone, thì nó vẫn chưa được điều chỉnh cổng ra
-            // và theo clone session, sẽ được gửi ra một cổng cố định, cổng đó có thể không đúng với
-            // cổng để tới đích của gói tin. Do đó, cần tái lưu thông để nạp lại vào bảng chuyển tiếp.
-
-            // Tuy nhiên, vì gói tin clone này đã được gắn payload cần thiết,
-            // nên sau khi tái lưu thông và định tuyến có thể gửi đi ngay mà không cần sửa thêm.
-            // Do đó, có thể đặt lại thông tin metadata cho giống gói tin IPv4 thông thường.
-            if (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
-                // mặc dù được recirculate, nhưng đánh false để được xem như gói tin thường
-                mta.recirculated = false;
-                // đánh lại instance_type về 0 để xem như gói tin thường và bỏ qua điều kiện này
-                std_meta.instance_type = 0;
-                recirculate_preserving_field_list(1);
-                return;
-            }
-
             // Dùng header để dụng thành thành gói tin ban đầu nếu đạt một trong 2 điều kiện:
             // 1: hdr.ethernet.etherType == EtherType.L3AGG -> đây là header của gói tin tổng hợp
             // Vì payload đã được trích ra và lưu ở control ingress, có thể tận dụng header này
