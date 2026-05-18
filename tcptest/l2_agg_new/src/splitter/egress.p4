@@ -1,4 +1,15 @@
-// Đoạn mã dưới đây sẽ được chèn vào control sw_egress qua lệnh include.
+#ifndef EGRESS_P4
+#define EGRESS_P4
+
+// ================= Hành động drop ===================
+
+// hành động này là một thủ tục, không thực hiện ngay mà sẽ được gọi trong khối apply
+action drop() {
+    mark_to_drop(std_meta);
+}
+
+
+// ================== Hành động tạo gói tin gốc từ các segment đã lưu trong register ==================
 
 action formSegPacket() {
     // Đọc số segment đang chờ trong register
@@ -81,3 +92,27 @@ action formSegPacket() {
         drop();
     }
 }
+
+// ================== Khối apply ==================
+
+apply {
+    if (hdr.ethernet.isValid())
+    {
+        // Dùng header để dụng thành thành gói tin ban đầu nếu đạt một trong 2 điều kiện:
+        // 1: hdr.ethernet.etherType == EtherType.L3AGG -> đây là header của gói tin tổng hợp
+        // Vì payload đã được trích ra và lưu ở control ingress, có thể tận dụng header này
+        // để gán segment và dựng thành gói tin ban đầu.
+
+        // 2: mta.recirculated == true -> đây là gói tin được tái lưu thông với mục đích
+        // chuẩn bị gắn segment tiếp theo vào payload và gửi đi.
+        if ((hdr.ethernet.etherType == EtherType.L3AGG) || mta.recirculated) {
+            formSegPacket();
+        }
+    }
+    else {
+        // loại bỏ gói tin không hợp lệ
+        drop();
+    }
+}
+
+#endif // EGRESS_P4

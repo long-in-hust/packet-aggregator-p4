@@ -1,3 +1,6 @@
+#ifndef DATA_STRUCTS_P4
+#define DATA_STRUCTS_P4
+
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 
@@ -134,3 +137,5 @@ struct metadata {
     @field_list(1)
     bool recirculated;
 }
+
+#endif // DATA_STRUCTS_P4

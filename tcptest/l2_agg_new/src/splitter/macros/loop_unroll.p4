@@ -1,3 +1,6 @@
+#ifndef LOOP_UNROLL_P4
+#define LOOP_UNROLL_P4
+
 /*
     Sử dụng Macro để tránh phải viết nhiều lần đoạn code giống nhau.
     Đoạn code dưới đây làm các việc sau:
@@ -42,3 +45,6 @@
     POP_SEGMENT \
     POP_SEGMENT \
     POP_SEGMENT 
+
+
+#endif // LOOP_UNROLL_P4

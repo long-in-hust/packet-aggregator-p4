@@ -74,76 +74,16 @@ control checksum_verifier(inout headers hdr, inout metadata mta) {
 
 control sw_ingress(inout headers hdr, inout metadata mta,
                 inout standard_metadata_t std_meta) {
-    // Hành động drop() phải được định nghĩa vì mark_to_drop() là một hàm extern, không thể được gọi từ trong bảng.
-    // Bảng ARP và bảng forwar sẽ dùng drop như hành động mặc định nếu không khớp với mục nào.
-    action drop() {
-        mark_to_drop(std_meta);
-    }
     
-    // Include file p4 khác vì mã nguồn dài và cần được chia nhỏ để dễ đọc và tác động hơn.
-    #include "ingress/splitBuffer.p4"
-    #include "ingress/L2Actions.p4"
+    #include "ingress.p4"
 
-    apply {
-        if (hdr.ethernet.isValid())
-        {
-            if (hdr.ethernet.etherType == EtherType.ARP && hdr.arp.isValid()) {
-                // Không áp dụng trích segment cho các gói ARP
-                // Áp dụng bảng học ARP để phân giải IPv4 sang MAC và báo về host nguồn.
-                arp_learning.apply();
-            }
-            else {
-                if (hdr.ethernet.etherType == EtherType.L3AGG && hdr.aggmeta.isValid()) {
-                    // Trích các segment từ payload nếu đó là gói tổng hợp hợp lệ
-                    save_buffer();
-                }
-                if (mta.recirculated) {
-                    // Đánh lại instance_type về 0 để
-                    // xem như gói tin thường và bỏ qua điều kiện nhận diện clone ở lần sau,
-                    // tránh bị lặp lại clone không cần thiết.
-                    std_meta.instance_type = 0;
-                }
-                // Chuyển tiếp Layer 2 như gói tin bình thường nếu header ethernet hợp lệ,
-                // và không phải ARP (cần gửi ra đúng cồng đi vào).
-                eth_forward.apply();
-            }
-        }
-        else {
-            // Bỏ gói tin không có header Ethernet hợp lệ
-            drop();
-        }
-    }
 }
 
 control sw_egress(inout headers hdr, inout metadata mta,
                inout standard_metadata_t std_meta) {
+
+    #include "egress.p4"
     
-    // hành động này là một thủ tục, không thực hiện ngay mà sẽ được gọi trong khối apply
-    action drop() {
-        mark_to_drop(std_meta);
-    }
-
-    #include "egress/sendSplitPkt.p4"
-
-    apply {
-        if (hdr.ethernet.isValid())
-        {
-            // Dùng header để dụng thành thành gói tin ban đầu nếu đạt một trong 2 điều kiện:
-            // 1: hdr.ethernet.etherType == EtherType.L3AGG -> đây là header của gói tin tổng hợp
-            // Vì payload đã được trích ra và lưu ở control ingress, có thể tận dụng header này
-            // để gán segment và dựng thành gói tin ban đầu.
-
-            // 2: mta.recirculated == true -> đây là gói tin được tái lưu thông với mục đích
-            // chuẩn bị gắn segment tiếp theo vào payload và gửi đi.
-            if ((hdr.ethernet.etherType == EtherType.L3AGG) || mta.recirculated) {
-                formSegPacket();
-            }
-        }
-        else {
-            // loại bỏ gói tin không hợp lệ
-            drop();
-        }
-    }
 }
 
 control checksum_recalc(inout headers hdr, inout metadata mta) {
