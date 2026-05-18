@@ -4,3 +4,4 @@ logs/**
 pcap
 **/__pycache__
 **/*.pyc
+**/*.bkp
