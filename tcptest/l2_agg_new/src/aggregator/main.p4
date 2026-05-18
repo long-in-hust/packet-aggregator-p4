@@ -1,11 +1,6 @@
 #include <core.p4>
 #include <v1model.p4>
 
-#define CPU_PORT 510
-#define DROP_PORT 511
-#define MAX_WAIT_TIME 200000 // 200000 microsec = 0.2s, ngưỡng thời gian chờ tối đa để tổng hợp batch
-#define DEVICE_MAC 0x0f0001000001
-
 #include "dataStructs.p4"
 #include "macros/loop_unroll.p4"
 
@@ -120,64 +115,13 @@ control checksum_verifier(inout headers hdr, inout metadata mta) {
 control sw_ingress(inout headers hdr, inout metadata mta,
                 inout standard_metadata_t std_meta) {
     
-    // Hành động drop() phải được định nghĩa vì mark_to_drop() là một hàm extern, không thể được gọi từ trong bảng.
-    // Hành động này là một thủ tục và sẽ được gọi từ trong bảng hoặc trong khối apply(), chứ chưa chạy ngay
-    action drop() {
-        // Đánh dấu std_meta.egress_spec bằng DROP_PORT,
-        // gói tin sẽ được chuyển tới cổng này
-        // trước khi vào control tiếp theo và bị bỏ đi.
-        mark_to_drop(std_meta);
-    }
-    
-    // Include file p4 khác vì mã nguồn dài và cần được chia nhỏ để dễ đọc và tác động hơn.
-    #include "ingress/L2Actions.p4"
-
-    #include "ingress/aggBuffer.p4"
-
-    apply {
-        if (hdr.ethernet.isValid()) {
-            // Nếu gói tin là ARP request, thực hiện chức năng ARP cơ bản để lấy địa chỉ MAC đích khi được yêu cầu.
-            // Tuy không phải vấn đề chính trong đồ án, chức năng này quan trọng vì thiết bị gửi cần biết
-            // địa chỉ MAC đích để gửi gói tin đi.
-            if (hdr.ethernet.etherType == EtherType.ARP && 
-                hdr.arp.isValid() && 
-                hdr.arp.op_code == ArpOpCode.REQUEST) 
-            {
-                arp_learning.apply();
-            }
-            else {
-                if (hdr.ethernet.etherType == EtherType.IPV4) {
-                    tbl_aggregation.apply();
-                }
-                if (std_meta.egress_spec != DROP_PORT) {
-                    eth_forward.apply();
-                }
-            }
-        } else {
-            drop();
-        }
-        
-    }
+    #include "ingress.p4"
 }
 
 control sw_egress(inout headers hdr, inout metadata mta,
                inout standard_metadata_t std_meta) {
                 // default drop action
-    action drop() {
-        mark_to_drop(std_meta);
-    }
-
-    #include "egress/sendAggPkt.p4"
-
-    apply {
-        if (hdr.ethernet.isValid()) {
-            if (mta.toggleSendAgg == 1) {
-                formAggPacket();
-            }
-        } else {
-            drop();
-        }
-    }
+    #include "egress.p4"
 }
 
 control checksum_recalc(inout headers hdr, inout metadata mta) {

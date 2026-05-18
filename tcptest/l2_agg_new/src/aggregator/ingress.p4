@@ -1,3 +1,70 @@
+#ifndef INGRESS_P4
+#define INGRESS_P4
+
+// =================== Định nghĩa hành động chung ===================
+
+// Hành động drop() phải được định nghĩa vì mark_to_drop() là một hàm extern, không thể được gọi từ trong bảng.
+// Hành động này là một thủ tục và sẽ được gọi từ trong bảng hoặc trong khối apply(), chứ chưa chạy ngay
+action drop() {
+    // Đánh dấu std_meta.egress_spec bằng DROP_PORT,
+    // gói tin sẽ được chuyển tới cổng này
+    // trước khi vào control tiếp theo và bị bỏ đi.
+    mark_to_drop(std_meta);
+}
+
+// ================== Nhóm hành động và bảng cho thao tác L2 cơ bản ==================
+// Phân giải IP thành MAC và trả về ARP một cách thủ công
+action mac_resolve(macAddr_t resolved_mac) {
+    hdr.arp.op_code = ArpOpCode.REPLY;
+    // địa chỉ nguồn của gói ARP REPLY là địa chỉ đích của gói ARP REQUEST,
+    // còn địa chỉ đích của ARP REPLY là địa chỉ được phân giải và truyền vào action này
+    hdr.arp.dst_mac = hdr.arp.src_mac;
+    hdr.arp.src_mac = resolved_mac;
+    // Hoán đổi địa chỉ IP nguồn và đích
+    // Gói tin ARP REPLY có hai địa chỉ này ngược lại so với gói tin ARP REQUEST
+    ip4Addr_t temp_ip = hdr.arp.dst_ip;
+    hdr.arp.dst_ip = hdr.arp.src_ip;
+    hdr.arp.src_ip = temp_ip;
+    // đặt lại địa chỉ MAC trong header Ethernet tương ứng với địa chỉ MAC trong header ARP
+    hdr.ethernet.dstAddr = hdr.arp.dst_mac;
+    hdr.ethernet.srcAddr = hdr.arp.src_mac;
+    // Trả về gói tin Reply qua đúng cổng ingress để về lại host yêu cầu ARP
+    std_meta.egress_spec = std_meta.ingress_port;
+}
+
+table arp_learning{
+    actions = {
+        mac_resolve;
+        drop;
+    }
+    key = {
+        hdr.arp.dst_ip: exact;
+    }
+    size = 64;
+    default_action = drop();
+}
+
+// L2 forwarding logic
+action forward(egressSpec_t port) {
+    std_meta.egress_spec = port;
+}
+
+// Bảng này sẽ đóng vai trò gần giống với bảng địa chỉ MAC trong switch truyền thống,
+// gắn địa chỉ MAC đích với cổng ra tương ứng.
+// Hiện chưa tích hợp tính năng gắn mục động cho bảng này.
+table eth_forward{
+    actions = {
+        forward;
+        drop;
+    }
+    key = {
+        hdr.ethernet.dstAddr: exact;
+    }
+    size = 64;
+    default_action = drop();
+}
+
+// ================== Nhóm hành động và bảng cho lưu payload vào register ==================
 // Hành động này sẽ được gọi trong aggregating() để đánh dấu batch mới được sử dụng để lưu gói tin,
 // đồng thời đánh dấu batch cũ đã sẵn sàng để được ghép vào gói tin hiện tại và gửi đi.
 
@@ -112,3 +179,31 @@ table tbl_aggregation {
     }
     default_action = NoAction();
 }
+
+// =================== Khối apply() của control sw_ingress ===================
+apply {
+    if (hdr.ethernet.isValid()) {
+        // Nếu gói tin là ARP request, thực hiện chức năng ARP cơ bản để lấy địa chỉ MAC đích khi được yêu cầu.
+        // Tuy không phải vấn đề chính trong đồ án, chức năng này quan trọng vì thiết bị gửi cần biết
+        // địa chỉ MAC đích để gửi gói tin đi.
+        if (hdr.ethernet.etherType == EtherType.ARP && 
+            hdr.arp.isValid() && 
+            hdr.arp.op_code == ArpOpCode.REQUEST) 
+        {
+            arp_learning.apply();
+        }
+        else {
+            if (hdr.ethernet.etherType == EtherType.IPV4) {
+                tbl_aggregation.apply();
+            }
+            if (std_meta.egress_spec != DROP_PORT) {
+                eth_forward.apply();
+            }
+        }
+    } else {
+        drop();
+    }
+    
+}
+
+#endif // INGRESS_P4

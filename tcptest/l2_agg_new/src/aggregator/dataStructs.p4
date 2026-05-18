@@ -1,3 +1,11 @@
+#ifndef DATA_STRUCTS_P4
+#define DATA_STRUCTS_P4
+
+#define CPU_PORT 510
+#define DROP_PORT 511
+#define MAX_WAIT_TIME 200000 // 200000 microsec = 0.2s, ngưỡng thời gian chờ tối đa để tổng hợp batch
+#define DEVICE_MAC 0x0f0001000001
+
 const int MAX_SEGMENTS_PER_BATCH = 11; // (51 + 512 - 14 - 1) div 47 = 13 (số dư là 15).
 // 51 byte là kích thước tối thiểu của mỗi ethernet frame L2 (không tính preamble, SFD và FCS)
 // được gửi trong kịch bản thủ nghiệm. Mỗi frame bao gồm:
@@ -179,3 +187,5 @@ struct metadata {
     // thành một khối dữ liệu dạng data_t trước khi đẩy vào register
     // Tác giả không lưu trực tiếp vào register vì không thể thao tác với register trong parser.
 }
+
+#endif // DATA_STRUCTS_P4

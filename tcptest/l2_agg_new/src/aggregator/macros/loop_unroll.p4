@@ -1,3 +1,6 @@
+#ifndef LOOP_UNROLL_P4
+#define LOOP_UNROLL_P4
+
 // Phương thức push_front sẽ dịch con trỏ đầu stack lên trước 1 phần tử, tạo một phần tử mới ở đầu stack,
 // và đẩy tất cả phần tử đã có lên sau phần tử mới này.
 // Sử dụng phương pháp push_front sẽ không phải quá quan tâm về chỉ số, vì phần tử mới luôn ở đầu stack (chỉ số bằng 0)
@@ -30,3 +33,5 @@
     APPEND_SEGMENT \
     APPEND_SEGMENT \
     APPEND_SEGMENT
+
+#endif // LOOP_UNROLL_P4
